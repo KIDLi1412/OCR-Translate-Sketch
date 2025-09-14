@@ -5,6 +5,30 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "mouse>=0.7.1",
+    "pandas>=2.3.2",
     "pillow>=11.3.0",
+    "pynput>=1.8.1",
     "pytesseract>=0.3.13",
+    "win10toast-persist>=0.10.1",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "S",  # flake8-bandit
+]
+
+fixable = [
+    "I",  # isort
 ]

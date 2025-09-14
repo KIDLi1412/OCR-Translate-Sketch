@@ -2,6 +2,7 @@ import os
 import sys
 import tkinter as tk
 import threading
+import mouse
 from PIL import ImageGrab
 import pytesseract
 import pandas as pd
@@ -25,7 +26,7 @@ class RealTimeOCR:
         self.running = True
         self.ocr_data = pd.DataFrame()
         self.debug_mode = True
-        self.pressed_keys = set()
+        self.listener = None
 
         self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
@@ -36,28 +37,35 @@ class RealTimeOCR:
             data = pytesseract.image_to_data(img, lang='eng+chi_sim', output_type=pytesseract.Output.DATAFRAME)
             self.ocr_data = data[(data['conf'] > 25) & (data['text'].str.strip() != '')]
 
-    def on_press(self, key):
-        if key in {keyboard.Key.ctrl_l, keyboard.Key.ctrl_r}:
-            self.pressed_keys.add(key)
-        elif isinstance(key, keyboard.KeyCode) and key.char == 'c':
-            if any(k in self.pressed_keys for k in {keyboard.Key.ctrl_l, keyboard.Key.ctrl_r}):
-                self.running = False
-                return False
+    def on_exit(self):
+        print("Hotkey pressed. Initiating shutdown...")
+        self.running = False
+        self.root.after(0, self.root.destroy)
 
-    def on_release(self, key):
-        if key in self.pressed_keys:
-            self.pressed_keys.remove(key)
+        if self.listener:
+            self.listener.stop()
 
     def start_keyboard_listener(self):
-        with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
+        hotkey = keyboard.HotKey(
+            keyboard.HotKey.parse('<ctrl>+c'),
+            self.on_exit
+        )
+
+        def on_press(key):
+            hotkey.press(listener.canonical(key))
+
+        def on_release(key):
+            hotkey.release(listener.canonical(key))
+
+        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+            self.listener = listener
             listener.join()
 
     def update_ui(self):
         self.canvas.delete("all")
-        x = self.root.winfo_pointerx()
-        y = self.root.winfo_pointery()
+        x, y = mouse.get_position()
 
-        for index, row in self.ocr_data.iterrows():
+        for _index, row in self.ocr_data.iterrows():
             left, top, width, height = row['left'], row['top'], row['width'], row['height']
 
             if left <= x <= left + width and top <= y <= top + height:
@@ -88,10 +96,11 @@ def show_notification():
     toaster.show_toast("RealTimeOCR", "程序已启动，按 Ctrl+C 停止", duration=5, threaded=True)
 
 def main():
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    # The tesseract path is user-specific and should not be hardcoded in the script
+    # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
     
     try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except (AttributeError, OSError):
         pass
 

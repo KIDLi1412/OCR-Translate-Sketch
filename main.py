@@ -1,15 +1,18 @@
+import ctypes
 import os
 import sys
-import tkinter as tk
 import threading
+import tkinter as tk
+
 import mouse
-from PIL import ImageGrab, Image
-import pytesseract
 import pandas as pd
+import pystray
+import pytesseract
+from PIL import Image, ImageGrab
 from pynput import keyboard
 from win10toast_persist import ToastNotifier
-import ctypes
-import pystray
+
+from config import Config
 
 if "VIRTUAL_ENV" in os.environ:
     base_python_path = sys.base_prefix
@@ -26,7 +29,7 @@ class RealTimeOCR:
         self.root = root
         self.running = True
         self.ocr_data = pd.DataFrame()
-        self.debug_mode = True
+        self.debug_mode = Config.DEBUG_MODE
         self.listener = None
 
         self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
@@ -45,8 +48,14 @@ class RealTimeOCR:
     def ocr_thread(self):
         while self.running:
             img = ImageGrab.grab()
-            data = pytesseract.image_to_data(img, lang='eng+chi_sim', output_type=pytesseract.Output.DATAFRAME)
-            self.ocr_data = data[(data['conf'] > 25) & (data['text'].str.strip() != '')]
+            custom_config = r'--oem 1'
+            data = pytesseract.image_to_data(
+                img,
+                lang=Config.OCR_LANGUAGE,
+                output_type=pytesseract.Output.DATAFRAME,
+                config=custom_config
+            )
+            self.ocr_data = data[(data['conf'] > Config.CONF_THRESHOLD) & (data['text'].str.strip() != '')]
 
     def on_exit(self):
         """
@@ -62,7 +71,7 @@ class RealTimeOCR:
 
     def start_keyboard_listener(self):
         hotkey = keyboard.HotKey(
-            keyboard.HotKey.parse('<ctrl>+c'),
+            keyboard.HotKey.parse(Config.STOP_HOTKEY),
             self.on_exit
         )
 
@@ -85,7 +94,14 @@ class RealTimeOCR:
 
             if left <= x <= left + width and top <= y <= top + height:
                 self.canvas.create_rectangle(left, top, left + width, top + height, outline='red', width=2)
-                self.canvas.create_text(left, top + height + 10, text=row['text'], fill='red', anchor='nw', font=("Arial", 12, "bold"))
+                self.canvas.create_text(
+                    left,
+                    top + height + 10,
+                    text=row['text'],
+                    fill='red',
+                    anchor='nw',
+                    font=("Arial", 12, "bold")
+                )
             elif self.debug_mode:
                 self.canvas.create_rectangle(left, top, left + width, top + height, outline='blue', width=1)
 
@@ -108,12 +124,9 @@ class RealTimeOCR:
 
 def show_notification():
     toaster = ToastNotifier()
-    toaster.show_toast("RealTimeOCR", "程序已启动，按 Ctrl+C 停止", duration=5, threaded=True)
+    toaster.show_toast("RealTimeOCR", "程序已启动，按 " + Config.STOP_HOTKEY + " 停止", duration=5, threaded=True)
 
 def main():
-    # The tesseract path is user-specific and should not be hardcoded in the script
-    # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-    
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except (AttributeError, OSError):

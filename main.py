@@ -3,12 +3,13 @@ import sys
 import tkinter as tk
 import threading
 import mouse
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 import pytesseract
 import pandas as pd
 from pynput import keyboard
 from win10toast_persist import ToastNotifier
 import ctypes
+import pystray
 
 if "VIRTUAL_ENV" in os.environ:
     base_python_path = sys.base_prefix
@@ -30,6 +31,16 @@ class RealTimeOCR:
 
         self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.setup_tray_icon()
+
+    def setup_tray_icon(self):
+        """
+        设置任务栏图标和菜单。
+        """
+        image = Image.open("icon.png")
+        menu = (pystray.MenuItem('退出', self.on_exit),)
+        self.icon = pystray.Icon("RealTimeOCR", image, "RealTimeOCR", menu)
+        self.icon.run_detached()
 
     def ocr_thread(self):
         while self.running:
@@ -38,12 +49,16 @@ class RealTimeOCR:
             self.ocr_data = data[(data['conf'] > 25) & (data['text'].str.strip() != '')]
 
     def on_exit(self):
+        """
+        程序退出时的处理函数，停止所有线程并销毁窗口。
+        """
         print("Hotkey pressed. Initiating shutdown...")
         self.running = False
-        self.root.after(0, self.root.destroy)
-
         if self.listener:
             self.listener.stop()
+        if self.icon:
+            self.icon.stop()
+        self.root.after(0, self.root.destroy)
 
     def start_keyboard_listener(self):
         hotkey = keyboard.HotKey(

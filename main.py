@@ -4,15 +4,11 @@ import sys
 import threading
 import tkinter as tk
 
-import mouse
-import pandas as pd
-import pystray
-import pytesseract
-from PIL import Image, ImageGrab
-from pynput import keyboard
-from win10toast_persist import ToastNotifier
-
 from config import Config
+from ocr_processor import OCRProcessor
+from ui_manager import UIManager
+from event_manager import EventManager
+
 
 if "VIRTUAL_ENV" in os.environ:
     base_python_path = sys.base_prefix
@@ -23,39 +19,24 @@ if "VIRTUAL_ENV" in os.environ:
         os.environ['TK_LIBRARY'] = tk_path
 
 
-class RealTimeOCR:
+class RealTimeOCRApp:
+    """
+    RealTimeOCRApp 是应用程序的主类，负责初始化和协调各个模块。
+    """
 
     def __init__(self, root):
+        """
+        初始化 RealTimeOCRApp。
+
+        Args:
+            root (tk.Tk): Tkinter 的根窗口。
+        """
         self.root = root
         self.running = True
-        self.ocr_data = pd.DataFrame()
-        self.debug_mode = Config.DEBUG_MODE
-        self.listener = None
 
-        self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
-        self.canvas.pack(fill=tk.BOTH, expand=True)
-        self.setup_tray_icon()
-
-    def setup_tray_icon(self):
-        """
-        设置任务栏图标和菜单。
-        """
-        image = Image.open("icon.png")
-        menu = (pystray.MenuItem('退出', self.on_exit),)
-        self.icon = pystray.Icon("RealTimeOCR", image, "RealTimeOCR", menu)
-        self.icon.run_detached()
-
-    def ocr_thread(self):
-        while self.running:
-            img = ImageGrab.grab()
-            custom_config = r'--oem 1'
-            data = pytesseract.image_to_data(
-                img,
-                lang=Config.OCR_LANGUAGE,
-                output_type=pytesseract.Output.DATAFRAME,
-                config=custom_config
-            )
-            self.ocr_data = data[(data['conf'] > Config.CONF_THRESHOLD) & (data['text'].str.strip() != '')]
+        self.ocr_processor = OCRProcessor()
+        self.ui_manager = UIManager(root, self.ocr_processor)
+        self.event_manager = EventManager(self.on_exit)
 
     def on_exit(self):
         """
@@ -63,70 +44,37 @@ class RealTimeOCR:
         """
         print("Hotkey pressed. Initiating shutdown...")
         self.running = False
-        if self.listener:
-            self.listener.stop()
-        if self.icon:
-            self.icon.stop()
+        self.ocr_processor.stop()
+        self.ui_manager.stop()
+        self.event_manager.stop()
         self.root.after(0, self.root.destroy)
 
-    def start_keyboard_listener(self):
-        hotkey = keyboard.HotKey(
-            keyboard.HotKey.parse(Config.STOP_HOTKEY),
-            self.on_exit
-        )
-
-        def on_press(key):
-            hotkey.press(listener.canonical(key))
-
-        def on_release(key):
-            hotkey.release(listener.canonical(key))
-
-        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-            self.listener = listener
-            listener.join()
-
-    def update_ui(self):
-        self.canvas.delete("all")
-        x, y = mouse.get_position()
-
-        for _index, row in self.ocr_data.iterrows():
-            left, top, width, height = row['left'], row['top'], row['width'], row['height']
-
-            if left <= x <= left + width and top <= y <= top + height:
-                self.canvas.create_rectangle(left, top, left + width, top + height, outline='red', width=2)
-                self.canvas.create_text(
-                    left,
-                    top + height + 10,
-                    text=row['text'],
-                    fill='red',
-                    anchor='nw',
-                    font=("Arial", 12, "bold")
-                )
-            elif self.debug_mode:
-                self.canvas.create_rectangle(left, top, left + width, top + height, outline='blue', width=1)
-
-        if self.running:
-            self.root.after(100, self.update_ui)
-        else:
-            self.root.quit()
-
     def start(self):
-        show_notification()
-        keyboard_thread = threading.Thread(target=self.start_keyboard_listener, daemon=True)
+        """
+        启动 RealTimeOCR 应用程序。
+        """
+        self.event_manager.start_notification()
+
+        # 启动键盘监听线程
+        keyboard_thread = threading.Thread(
+            target=self.event_manager.start_keyboard_listener, daemon=True
+        )
         keyboard_thread.start()
 
-        ocr_proc = threading.Thread(target=self.ocr_thread, daemon=True)
-        ocr_proc.start()
+        # 启动 OCR 线程
+        ocr_thread = threading.Thread(target=self.ocr_processor.ocr_thread, daemon=True)
+        ocr_thread.start()
 
-        self.update_ui()
+        # 启动 UI 更新
+        self.ui_manager.start()
         self.root.mainloop()
 
 
-def show_notification():
-    toaster = ToastNotifier()
-    toaster.show_toast("RealTimeOCR", "程序已启动，按 " + Config.STOP_HOTKEY + " 停止", duration=5, threaded=True)
-
 def main():
+    """
+    应用程序的入口点。
+    初始化 Tkinter 窗口并启动 RealTimeOCRApp。
+    """
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except (AttributeError, OSError):
@@ -142,9 +90,11 @@ def main():
     screen_height = root.winfo_screenheight()
     root.geometry(f"{screen_width}x{screen_height}+0+0")
 
-    app = RealTimeOCR(root)
+    app = RealTimeOCRApp(root)
     app.start()
 
 
 if __name__ == "__main__":
     main()
+
+

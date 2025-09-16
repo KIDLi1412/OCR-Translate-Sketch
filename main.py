@@ -1,5 +1,6 @@
 import contextlib
 import ctypes
+import multiprocessing
 import os
 import sys
 import threading
@@ -61,9 +62,8 @@ class App:
         )
         keyboard_thread.start()
 
-        # 启动 OCR 线程
-        ocr_thread = threading.Thread(target=self.ocr_processor.ocr_thread, daemon=True)
-        ocr_thread.start()
+        # 启动 OCR 进程
+        self.ocr_processor.start()
 
         # 启动 UI 更新
         self.ui_manager.start()
@@ -93,6 +93,7 @@ def main():
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()
 
 

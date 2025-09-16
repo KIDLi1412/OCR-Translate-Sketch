@@ -15,13 +15,17 @@ class Config:
 
     # Tesseract OCR 使用的语言。
     # 可以是 'eng' (英语), 'chi_sim' (简体中文), 或 'eng+chi_sim' (两者)。
-    OCR_LANGUAGE: str = 'eng+chi_sim'
+    OCR_LANGUAGE: str = 'eng'
 
     # OCR 结果的置信度阈值。
     # 只有置信度高于此值的文本才会被显示。
     CONF_THRESHOLD: int = 25
 
     PAR_CONF_THRESHOLD: int = 50
+
+    # OCR 识别的帧率。
+    # 即每秒钟进行多少次屏幕截图和文字识别。
+    OCR_FPS: int = 2
 
     # 是否启用调试模式。
     # 在调试模式下, 所有检测到的文本框都会显示蓝色边框。

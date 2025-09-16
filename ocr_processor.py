@@ -1,5 +1,7 @@
-import threading
+import multiprocessing
+import time
 import tkinter as tk
+from queue import Empty
 
 import pandas as pd
 import pytesseract
@@ -10,10 +12,51 @@ from config import Config
 OCR_EVENT = "<<OCRComplete>>"
 
 
+def ocr_process(data_queue: multiprocessing.Queue, running_flag: multiprocessing.Value):
+    """
+    OCR 识别进程的主循环。
+    持续捕获屏幕, 使用 Tesseract 进行 OCR 识别, 并将结果放入队列。
+    """
+    TARGET_INTERVAL = 1.0 / Config.OCR_FPS
+
+    while running_flag.value:
+        start_time = time.perf_counter()
+
+        img = ImageGrab.grab().convert('L')
+        custom_config = r'--oem 1'
+        data = pytesseract.image_to_data(
+            img,
+            lang=Config.OCR_LANGUAGE,
+            output_type=pytesseract.Output.DATAFRAME,
+            config=custom_config
+        )
+        # 仅保留带有文本且置信度高于阈值的数据
+        ocr_result = data[(data['conf'] > Config.CONF_THRESHOLD) & (data['text'].str.strip() != '')]
+
+        # 清空队列并将新数据放入
+        while not data_queue.empty():
+            try:
+                data_queue.get_nowait()
+            except Empty:
+                break
+        data_queue.put(ocr_result)
+
+        # 计算实际耗时
+        actual_interval = time.perf_counter() - start_time
+
+        if Config.DEBUG_MODE:
+            print(f"OCR识别耗时: {actual_interval:.4f} 秒")
+        # 等待目标间隔时间
+        if actual_interval < TARGET_INTERVAL:
+            time.sleep(TARGET_INTERVAL - actual_interval)
+        else:
+            print(f"OCR识别耗时过长: {actual_interval:.4f} 秒")
+
+
 class OCRProcessor:
     """
     OCRProcessor 类负责执行屏幕截图的 OCR 识别。
-    它在一个单独的线程中运行, 持续捕获屏幕并进行文本识别。
+    它在一个单独的进程中运行, 持续捕获屏幕并进行文本识别。
     """
 
     def __init__(self, root: tk.Tk):
@@ -25,8 +68,35 @@ class OCRProcessor:
         """
         self.root = root
         self.ocr_data = pd.DataFrame()
-        self.running = True
-        self.lock = threading.Lock()
+        self.data_queue = multiprocessing.Queue()
+        self.running_flag = multiprocessing.Value('b', True)
+        self.process = multiprocessing.Process(
+            target=ocr_process,
+            args=(self.data_queue, self.running_flag)
+        )
+        self.process.daemon = True
+
+    def start(self):
+        """
+        启动 OCR 识别进程。
+        """
+        self.process.start()
+        self.root.after(100, self.check_queue)
+
+    def check_queue(self):
+        """
+        检查队列中是否有新的 OCR 数据。
+        """
+        try:
+            ocr_result = self.data_queue.get_nowait()
+            if not ocr_result.equals(self.ocr_data):
+                self.ocr_data = ocr_result
+                self.root.event_generate(OCR_EVENT)
+        except Empty:
+            pass
+        finally:
+            if self.running_flag.value:
+                self.root.after(100, self.check_queue)
 
     @staticmethod
     def _aggregate_par_info(group: pd.DataFrame) -> pd.Series:
@@ -63,7 +133,9 @@ class OCRProcessor:
         })
 
     @staticmethod
-    def merge_ocr_data_to_paragraphs(ocr_df: pd.DataFrame, conf_threshold: int = Config.PAR_CONF_THRESHOLD) -> pd.DataFrame:
+    def merge_ocr_data_to_paragraphs(
+        ocr_df: pd.DataFrame, conf_threshold: int = Config.PAR_CONF_THRESHOLD
+    ) -> pd.DataFrame:
         """
         将原始的 OCR DataFrame (单词级别) 合并成段落级别的 DataFrame。
 
@@ -78,57 +150,38 @@ class OCRProcessor:
             return pd.DataFrame()
 
         # 分组并应用合并函数
-        merged_pars = ocr_df.groupby(['page_num', 'block_num', 'par_num']).apply(OCRProcessor._aggregate_par_info)
+        merged_pars = ocr_df.groupby(['page_num', 'block_num', 'par_num']).apply(OCRProcessor._aggregate_par_info,
+                                                                                 include_groups=False)
 
         ocr_pars_df = merged_pars.reset_index()
 
         # 过滤掉低置信度的段落
         return ocr_pars_df[ocr_pars_df['conf'] > conf_threshold]
 
-    def ocr_thread(self):
-        """
-        OCR 识别线程的主循环。
-        持续捕获屏幕, 使用 Tesseract 进行 OCR 识别, 并存储结果。
-        """
-        while self.running:
-            img = ImageGrab.grab()
-            custom_config = r'--oem 1'
-            data = pytesseract.image_to_data(
-                img,
-                lang=Config.OCR_LANGUAGE,
-                output_type=pytesseract.Output.DATAFRAME,
-                config=custom_config
-            )
-            # 仅保留带有文本且置信度高于阈值的数据
-            ocr_result = data[(data['conf'] > Config.CONF_THRESHOLD) & (data['text'].str.strip() != '')]
-
-            with self.lock:
-                self.ocr_data = ocr_result
-            # 生成 OCR 完成事件
-            self.root.event_generate(OCR_EVENT)
-
     def stop(self):
         """
-        停止 OCR 识别线程。
+        停止 OCR 识别进程。
         """
-        self.running = False
+        self.running_flag.value = False
+        self.process.join(timeout=1)
+        if self.process.is_alive():
+            self.process.terminate()
+            self.process.join()
 
-    def get_ocr_data(self):
+    def get_ocr_data(self) -> pd.DataFrame:
         """
         获取当前的 OCR 识别数据。
 
         Returns:
             pd.DataFrame: 包含 OCR 识别结果的 DataFrame。
         """
-        with self.lock:
-            return self.ocr_data.copy()
+        return self.ocr_data.copy()
 
-    def get_merged_ocr_data(self):
+    def get_merged_ocr_data(self) -> pd.DataFrame:
         """
         获取合并后的 OCR 识别数据。
 
         Returns:
             pd.DataFrame: 包含合并后段落信息的 DataFrame。
         """
-        with self.lock:
-            return self.merge_ocr_data_to_paragraphs(self.ocr_data)
+        return self.merge_ocr_data_to_paragraphs(self.ocr_data)

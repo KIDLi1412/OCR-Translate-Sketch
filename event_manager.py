@@ -1,5 +1,3 @@
-import threading
-
 import pystray
 from PIL import Image
 from pynput import keyboard
@@ -25,7 +23,7 @@ class EventManager:
         self.listener = None
         self.icon = None
 
-    def setup_tray_icon(self):
+    def start_tray_icon(self):
         """
         设置任务栏图标和菜单。
         """

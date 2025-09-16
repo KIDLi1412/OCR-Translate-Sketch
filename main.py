@@ -4,11 +4,9 @@ import sys
 import threading
 import tkinter as tk
 
-from config import Config
+from event_manager import EventManager
 from ocr_processor import OCRProcessor
 from ui_manager import UIManager
-from event_manager import EventManager
-
 
 if "VIRTUAL_ENV" in os.environ:
     base_python_path = sys.base_prefix
@@ -24,7 +22,7 @@ class RealTimeOCRApp:
     RealTimeOCRApp 是应用程序的主类，负责初始化和协调各个模块。
     """
 
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk):
         """
         初始化 RealTimeOCRApp。
 
@@ -53,6 +51,7 @@ class RealTimeOCRApp:
         """
         启动 RealTimeOCR 应用程序。
         """
+        self.event_manager.start_tray_icon()
         self.event_manager.start_notification()
 
         # 启动键盘监听线程

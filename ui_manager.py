@@ -51,7 +51,11 @@ class UIManager:
                 left, top, width, height = row['left'], row['top'], row['width'], row['height']
 
                 if left <= x <= left + width and top <= y <= top + height:
-                    self.canvas.create_rectangle(left, top, left + width, top + height, outline='red', width=2)
+                    self.canvas.create_rectangle(
+                        left, top, left + width, top + height,
+                        outline=Config.HIGHLIGHT_RECT_OUTLINE_COLOR,
+                        width=Config.HIGHLIGHT_RECT_OUTLINE_WIDTH
+                    )
                     self.canvas.create_text(
                         left,
                         top + height + 10,
@@ -61,10 +65,14 @@ class UIManager:
                         font=("Arial", 12, "bold")
                     )
                 elif self.debug_mode:
-                    self.canvas.create_rectangle(left, top, left + width, top + height, outline='blue', width=1)
+                    self.canvas.create_rectangle(
+                        left, top, left + width, top + height,
+                        outline=Config.DEBUG_RECT_OUTLINE_COLOR,
+                        width=Config.DEBUG_RECT_OUTLINE_WIDTH
+                    )
 
         if self.running:
-            self.root.after(100, self.update_ui)
+            self.root.after(Config.UI_UPDATE_INTERVAL, self.update_ui)
         else:
             self.root.quit()
 

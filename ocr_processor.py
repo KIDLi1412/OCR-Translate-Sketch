@@ -63,7 +63,7 @@ class OCRProcessor:
         })
 
     @staticmethod
-    def merge_ocr_data_to_paragraphs(ocr_df: pd.DataFrame, conf_threshold: int = 50) -> pd.DataFrame:
+    def merge_ocr_data_to_paragraphs(ocr_df: pd.DataFrame, conf_threshold: int = Config.PAR_CONF_THRESHOLD) -> pd.DataFrame:
         """
         将原始的 OCR DataFrame (单词级别) 合并成段落级别的 DataFrame。
 

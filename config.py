@@ -21,6 +21,8 @@ class Config:
     # 只有置信度高于此值的文本才会被显示。
     CONF_THRESHOLD: int = 25
 
+    PAR_CONF_THRESHOLD: int = 50
+
     # 是否启用调试模式。
     # 在调试模式下, 所有检测到的文本框都会显示蓝色边框。
     DEBUG_MODE: bool = True
@@ -28,4 +30,15 @@ class Config:
     # 停止程序的快捷键。
     # 示例: '<ctrl>+c'
     STOP_HOTKEY: str = '<ctrl>+c'
+
+    # UI 更新间隔 (毫秒)。
+    UI_UPDATE_INTERVAL: int = 100
+
+    # 高亮矩形边框颜色和宽度。
+    HIGHLIGHT_RECT_OUTLINE_COLOR: str = 'red'
+    HIGHLIGHT_RECT_OUTLINE_WIDTH: int = 2
+
+    # 调试模式下矩形边框颜色和宽度。
+    DEBUG_RECT_OUTLINE_COLOR: str = 'blue'
+    DEBUG_RECT_OUTLINE_WIDTH: int = 1
 

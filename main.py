@@ -1,3 +1,4 @@
+import contextlib
 import ctypes
 import os
 import sys
@@ -19,7 +20,7 @@ if "VIRTUAL_ENV" in os.environ:
 
 class App:
     """
-    App 是应用程序的主类，负责初始化和协调各个模块。
+    App 是应用程序的主类, 负责初始化和协调各个模块。
     """
 
     def __init__(self, root: tk.Tk):
@@ -32,15 +33,15 @@ class App:
         self.root = root
         self.running = True
 
-        self.ocr_processor = OCRProcessor()
+        self.ocr_processor = OCRProcessor(self.root)
         self.ui_manager = UIManager(root, self.ocr_processor)
         self.event_manager = EventManager(self.on_exit)
 
     def on_exit(self):
         """
-        程序退出时的处理函数，停止所有线程并销毁窗口。
+        程序退出时的处理函数, 停止所有线程并销毁窗口。
         """
-        print("Hotkey pressed. Initiating shutdown...")
+        print("Initiating shutdown...")
         self.running = False
         self.ocr_processor.stop()
         self.ui_manager.stop()
@@ -74,20 +75,18 @@ def main():
     应用程序的入口点。
     初始化 Tkinter 窗口并启动 App。
     """
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)
-    except (AttributeError, OSError):
-        pass
+    with contextlib.suppress(AttributeError, OSError):
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # 设置 DPI 感知
 
     root = tk.Tk()
-    root.overrideredirect(True)
-    root.wm_attributes("-topmost", True)
-    root.wm_attributes("-transparentcolor", "white")
-    root.attributes("-alpha", 0.8)
+    root.overrideredirect(True)  # 隐藏窗口边框
+    root.wm_attributes("-topmost", True)  # 窗口置顶
+    root.wm_attributes("-transparentcolor", "white")  # 透明颜色
+    root.attributes("-alpha", 0.8)  # 窗口透明度
 
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    root.geometry(f"{screen_width}x{screen_height}+0+0")
+    screen_width = root.winfo_screenwidth()  # 获取屏幕宽度
+    screen_height = root.winfo_screenheight()  # 获取屏幕高度
+    root.geometry(f"{screen_width}x{screen_height}+0+0")  # 窗口大小和位置
 
     app = App(root)
     app.start()

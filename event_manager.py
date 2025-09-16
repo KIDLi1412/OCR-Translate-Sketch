@@ -8,7 +8,7 @@ from config import Config
 
 class EventManager:
     """
-    EventManager 类负责处理应用程序的事件，包括键盘监听和任务栏图标。
+    EventManager 类负责处理应用程序的事件, 包括键盘监听和任务栏图标。
     它提供启动和停止这些事件监听的方法。
     """
 
@@ -34,7 +34,7 @@ class EventManager:
 
     def start_keyboard_listener(self):
         """
-        启动键盘监听器，监听停止热键。
+        启动键盘监听器, 监听停止热键。
         """
         hotkey = keyboard.HotKey(
             keyboard.HotKey.parse(Config.STOP_HOTKEY),
@@ -56,11 +56,16 @@ class EventManager:
         显示程序启动通知。
         """
         toaster = ToastNotifier()
-        toaster.show_toast("OCR-Translate-Sketch", "程序已启动，按 " + Config.STOP_HOTKEY + " 停止", duration=5, threaded=True)
+        toaster.show_toast(
+            "OCR-Translate-Sketch",
+            "程序已启动, 按 " + Config.STOP_HOTKEY + " 停止",
+            duration=5,
+            threaded=True,
+        )
 
     def stop(self):
         """
-        停止事件管理器，包括键盘监听和任务栏图标。
+        停止事件管理器, 包括键盘监听和任务栏图标。
         """
         if self.listener:
             self.listener.stop()

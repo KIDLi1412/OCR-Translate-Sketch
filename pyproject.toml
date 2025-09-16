@@ -28,10 +28,14 @@ select = [
     "C4", # flake8-comprehensions
     "UP", # pyupgrade
     "S",  # flake8-bandit
+    "RUF", # ruff
+    "SIM", # flake8-simplify
+    "RET", # flake8-return
 ]
 
 fixable = [
     "I",  # isort
+    "RUF022", # `__all__` is not sorted
 ]
 
 [dependency-groups]

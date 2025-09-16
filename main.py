@@ -17,14 +17,14 @@ if "VIRTUAL_ENV" in os.environ:
         os.environ['TK_LIBRARY'] = tk_path
 
 
-class RealTimeOCRApp:
+class App:
     """
-    RealTimeOCRApp 是应用程序的主类，负责初始化和协调各个模块。
+    App 是应用程序的主类，负责初始化和协调各个模块。
     """
 
     def __init__(self, root: tk.Tk):
         """
-        初始化 RealTimeOCRApp。
+        初始化 App。
 
         Args:
             root (tk.Tk): Tkinter 的根窗口。
@@ -49,7 +49,7 @@ class RealTimeOCRApp:
 
     def start(self):
         """
-        启动 RealTimeOCR 应用程序。
+        启动应用程序。
         """
         self.event_manager.start_tray_icon()
         self.event_manager.start_notification()
@@ -72,7 +72,7 @@ class RealTimeOCRApp:
 def main():
     """
     应用程序的入口点。
-    初始化 Tkinter 窗口并启动 RealTimeOCRApp。
+    初始化 Tkinter 窗口并启动 App。
     """
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
@@ -89,7 +89,7 @@ def main():
     screen_height = root.winfo_screenheight()
     root.geometry(f"{screen_width}x{screen_height}+0+0")
 
-    app = RealTimeOCRApp(root)
+    app = App(root)
     app.start()
 
 

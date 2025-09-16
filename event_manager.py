@@ -29,7 +29,7 @@ class EventManager:
         """
         image = Image.open("icon.png")
         menu = (pystray.MenuItem('退出', self.on_exit_callback),)
-        self.icon = pystray.Icon("RealTimeOCR", image, "RealTimeOCR", menu)
+        self.icon = pystray.Icon("OCR-Translate-Sketch", image, "OCR-Translate-Sketch", menu)
         self.icon.run_detached()
 
     def start_keyboard_listener(self):
@@ -56,7 +56,7 @@ class EventManager:
         显示程序启动通知。
         """
         toaster = ToastNotifier()
-        toaster.show_toast("RealTimeOCR", "程序已启动，按 " + Config.STOP_HOTKEY + " 停止", duration=5, threaded=True)
+        toaster.show_toast("OCR-Translate-Sketch", "程序已启动，按 " + Config.STOP_HOTKEY + " 停止", duration=5, threaded=True)
 
     def stop(self):
         """

@@ -37,7 +37,7 @@ class EventManager:
         启动键盘监听器, 监听停止热键。
         """
         hotkey = keyboard.HotKey(
-            keyboard.HotKey.parse(Config.STOP_HOTKEY),
+            keyboard.HotKey.parse(Config().STOP_HOTKEY),
             self.on_exit_callback
         )
 
@@ -58,7 +58,7 @@ class EventManager:
         toaster = ToastNotifier()
         toaster.show_toast(
             "OCR-Translate-Sketch",
-            "程序已启动, 按 " + Config.STOP_HOTKEY + " 停止",
+            "程序已启动, 按 " + Config().STOP_HOTKEY + " 停止",
             duration=5,
             threaded=True,
         )

@@ -17,7 +17,7 @@ def ocr_process(data_queue: multiprocessing.Queue, running_flag: multiprocessing
     OCR 识别进程的主循环。
     持续捕获屏幕, 使用 Tesseract 进行 OCR 识别, 并将结果放入队列。
     """
-    TARGET_INTERVAL = 1.0 / Config.OCR_FPS
+    TARGET_INTERVAL = 1.0 / Config().OCR_FPS
 
     while running_flag.value:
         start_time = time.perf_counter()
@@ -26,12 +26,12 @@ def ocr_process(data_queue: multiprocessing.Queue, running_flag: multiprocessing
         custom_config = r'--oem 1'
         data = pytesseract.image_to_data(
             img,
-            lang=Config.OCR_LANGUAGE,
+            lang=Config().OCR_LANGUAGE,
             output_type=pytesseract.Output.DATAFRAME,
             config=custom_config
         )
         # 仅保留带有文本且置信度高于阈值的数据
-        ocr_result = data[(data['conf'] > Config.CONF_THRESHOLD) & (data['text'].str.strip() != '')]
+        ocr_result = data[(data['conf'] > Config().CONF_THRESHOLD) & (data['text'].str.strip() != '')]
 
         # 清空队列并将新数据放入
         while not data_queue.empty():
@@ -44,7 +44,7 @@ def ocr_process(data_queue: multiprocessing.Queue, running_flag: multiprocessing
         # 计算实际耗时
         actual_interval = time.perf_counter() - start_time
 
-        if Config.DEBUG_MODE:
+        if Config().DEBUG_MODE:
             print(f"OCR识别耗时: {actual_interval:.4f} 秒")
         # 等待目标间隔时间
         if actual_interval < TARGET_INTERVAL:
@@ -134,7 +134,7 @@ class OCRProcessor:
 
     @staticmethod
     def merge_ocr_data_to_paragraphs(
-        ocr_df: pd.DataFrame, conf_threshold: int = Config.PAR_CONF_THRESHOLD
+        ocr_df: pd.DataFrame
     ) -> pd.DataFrame:
         """
         将原始的 OCR DataFrame (单词级别) 合并成段落级别的 DataFrame。
@@ -156,7 +156,7 @@ class OCRProcessor:
         ocr_pars_df = merged_pars.reset_index()
 
         # 过滤掉低置信度的段落
-        return ocr_pars_df[ocr_pars_df['conf'] > conf_threshold]
+        return ocr_pars_df[ocr_pars_df['conf'] > Config().PAR_CONF_THRESHOLD]
 
     def stop(self):
         """

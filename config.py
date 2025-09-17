@@ -5,44 +5,71 @@ config.py
 通过修改此文件, 可以调整应用程序的行为, 而无需更改主程序逻辑。
 """
 
+import yaml
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import os
+import threading
+
+# NOTE: 配置文件路径
+CONFIG_FILE = 'config.yaml'
+
 class Config:
     """
     应用程序配置类。
+    从 config.yaml 加载配置, 并支持热加载。
     """
-    # Tesseract 可执行文件的路径。
-    # 示例: r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-    TESSERACT_CMD: str = r'D:\Program Files\Tesseract-OCR\tesseract.exe'
 
-    # Tesseract OCR 使用的语言。
-    # 可以是 'eng' (英语), 'chi_sim' (简体中文), 或 'eng+chi_sim' (两者)。
-    OCR_LANGUAGE: str = 'eng'
+    _instance = None
+    _lock = threading.Lock()
 
-    # OCR 结果的置信度阈值。
-    # 只有置信度高于此值的文本才会被显示。
-    CONF_THRESHOLD: int = 25
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(Config, cls).__new__(cls)
+                    cls._instance._load_config()
+                    cls._instance._start_watcher()
+        return cls._instance
 
-    PAR_CONF_THRESHOLD: int = 50
+    def _load_config(self):
+        """
+        从 config.yaml 文件加载配置。
+        """
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+                for key, value in config_data.items():
+                    setattr(self, key, value)
+            print(f"配置已从 {CONFIG_FILE} 重新加载。")
+        except FileNotFoundError:
+            print(f"错误: 配置文件 {CONFIG_FILE} 未找到。")
+        except Exception as e:
+            print(f"加载配置文件时发生错误: {e}")
 
-    # OCR 识别的帧率。
-    # 即每秒钟进行多少次屏幕截图和文字识别。
-    OCR_FPS: int = 2
+    def _start_watcher(self):
+        """
+        启动文件系统观察器, 监听 config.yaml 的变化。
+        """
+        event_handler = ConfigFileEventHandler(self)
+        observer = Observer()
+        observer.schedule(event_handler, path=os.path.dirname(CONFIG_FILE) or '.', recursive=False)
+        observer.start()
+        print(f"正在监听 {CONFIG_FILE} 的变化...")
 
-    # 是否启用调试模式。
-    # 在调试模式下, 所有检测到的文本框都会显示蓝色边框。
-    DEBUG_MODE: bool = True
+class ConfigFileEventHandler(FileSystemEventHandler):
+    """
+    处理配置文件变化的事件。
+    """
+    def __init__(self, config_instance):
+        super().__init__()
+        self.config_instance = config_instance
 
-    # 停止程序的快捷键。
-    # 示例: '<ctrl>+c'
-    STOP_HOTKEY: str = '<ctrl>+c'
-
-    # UI 更新间隔 (毫秒)。
-    UI_UPDATE_INTERVAL: int = 100
-
-    # 高亮矩形边框颜色和宽度。
-    HIGHLIGHT_RECT_OUTLINE_COLOR: str = 'red'
-    HIGHLIGHT_RECT_OUTLINE_WIDTH: int = 2
-
-    # 调试模式下矩形边框颜色和宽度。
-    DEBUG_RECT_OUTLINE_COLOR: str = 'blue'
-    DEBUG_RECT_OUTLINE_WIDTH: int = 1
+    def on_modified(self, event):
+        """
+        当配置文件被修改时重新加载配置。
+        """
+        if not event.is_directory and os.path.basename(event.src_path) == CONFIG_FILE:
+            print(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...")
+            self.config_instance._load_config()
 

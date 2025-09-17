@@ -1,0 +1,38 @@
+# Tesseract 可执行文件的路径。
+# 示例: r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+TESSERACT_CMD: D:\Program Files\Tesseract-OCR\tesseract.exe
+
+# Tesseract OCR 使用的语言。
+# 可以是 'eng' (英语), 'chi_sim' (简体中文), 或 'eng+chi_sim' (两者)。
+OCR_LANGUAGE: eng
+
+# OCR 结果的置信度阈值。
+# 只有置信度高于此值的文本才会被显示。
+CONF_THRESHOLD: 25
+
+# 段落置信度阈值。
+# 只有段落置信度高于此值的段落才会被显示。
+PAR_CONF_THRESHOLD: 50
+
+# OCR 识别的帧率。
+# 即每秒钟进行多少次屏幕截图和文字识别。
+OCR_FPS: 2
+
+# 是否启用调试模式。
+# 在调试模式下, 所有检测到的文本框都会显示边框。
+DEBUG_MODE: True
+
+# 停止程序的快捷键。
+# 示例: '<ctrl>+<alt>+c'
+STOP_HOTKEY: <alt>+c
+
+#鼠标附近 UI 更新间隔 (毫秒)。
+UI_UPDATE_INTERVAL: 100
+
+# 高亮矩形边框颜色和宽度。
+HIGHLIGHT_RECT_OUTLINE_COLOR: red
+HIGHLIGHT_RECT_OUTLINE_WIDTH: 2
+
+# 调试模式下矩形边框颜色和宽度。
+DEBUG_RECT_OUTLINE_COLOR: blue
+DEBUG_RECT_OUTLINE_WIDTH: 1

@@ -23,7 +23,7 @@ class UIManager:
         """
         self.root = root
         self.ocr_data_provider = ocr_data_provider
-        self.debug_mode = Config.DEBUG_MODE
+        self.debug_mode = Config().DEBUG_MODE
         self.running = True
         self.ocr_data = pd.DataFrame()
 
@@ -53,8 +53,8 @@ class UIManager:
                 if left <= x <= left + width and top <= y <= top + height:
                     self.canvas.create_rectangle(
                         left, top, left + width, top + height,
-                        outline=Config.HIGHLIGHT_RECT_OUTLINE_COLOR,
-                        width=Config.HIGHLIGHT_RECT_OUTLINE_WIDTH
+                        outline=Config().HIGHLIGHT_RECT_OUTLINE_COLOR,
+                        width=Config().HIGHLIGHT_RECT_OUTLINE_WIDTH
                     )
                     self.canvas.create_text(
                         left,
@@ -67,12 +67,12 @@ class UIManager:
                 elif self.debug_mode:
                     self.canvas.create_rectangle(
                         left, top, left + width, top + height,
-                        outline=Config.DEBUG_RECT_OUTLINE_COLOR,
-                        width=Config.DEBUG_RECT_OUTLINE_WIDTH
+                        outline=Config().DEBUG_RECT_OUTLINE_COLOR,
+                        width=Config().DEBUG_RECT_OUTLINE_WIDTH
                     )
 
         if self.running:
-            self.root.after(Config.UI_UPDATE_INTERVAL, self.update_ui)
+            self.root.after(Config().UI_UPDATE_INTERVAL, self.update_ui)
         else:
             self.root.quit()
 

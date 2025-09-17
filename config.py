@@ -47,6 +47,43 @@ class Config:
         except Exception as e:
             print(f"加载配置文件时发生错误: {e}")
 
+    def update_config_file(self, updated_config):
+        """
+        更新 config.yaml 文件中的配置。
+
+        Args:
+            updated_config (dict): 包含要更新的配置项的字典。
+        """
+        try:
+            # 读取现有配置以保留未修改的项
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                current_config = yaml.safe_load(f)
+            
+            if current_config is None:
+                current_config = {}
+
+            # 更新配置
+            for key, value in updated_config.items():
+                # 尝试将字符串值转换回原始类型 (例如, int, bool)
+                if isinstance(value, str):
+                    if value.lower() == 'true':
+                        current_config[key] = True
+                    elif value.lower() == 'false':
+                        current_config[key] = False
+                    elif value.isdigit():
+                        current_config[key] = int(value)
+                    else:
+                        current_config[key] = value
+                else:
+                    current_config[key] = value
+
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(current_config, f, allow_unicode=True)
+            print(f"配置已成功保存到 {CONFIG_FILE}。")
+            self._load_config()  # 重新加载配置到当前实例
+        except Exception as e:
+            print(f"保存配置文件时发生错误: {e}")
+
     def _start_watcher(self):
         """
         启动文件系统观察器, 监听 config.yaml 的变化。

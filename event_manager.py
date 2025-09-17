@@ -2,6 +2,8 @@ import pystray
 from PIL import Image
 from pynput import keyboard
 from win10toast_persist import ToastNotifier
+import tkinter as tk
+from tkinter import ttk, messagebox
 
 from config import Config
 
@@ -22,15 +24,26 @@ class EventManager:
         self.on_exit_callback = on_exit_callback
         self.listener = None
         self.icon = None
+        self.settings_window = None
 
     def start_tray_icon(self):
         """
         设置任务栏图标和菜单。
         """
         image = Image.open("icon.png")
-        menu = (pystray.MenuItem('退出', self.on_exit_callback),)
+        menu = (pystray.MenuItem('设置', self.open_settings),
+                pystray.MenuItem('退出', self.on_exit_callback),)
         self.icon = pystray.Icon("OCR-Translate-Sketch", image, "OCR-Translate-Sketch", menu)
         self.icon.run_detached()
+
+    def open_settings(self):
+        """
+        打开设置窗口。
+        """
+        if self.settings_window is None or not self.settings_window.winfo_exists():
+            self.settings_window = SettingsWindow(self.icon)
+        self.settings_window.deiconify()
+        self.settings_window.focus_force()
 
     def start_keyboard_listener(self):
         """
@@ -71,3 +84,91 @@ class EventManager:
             self.listener.stop()
         if self.icon:
             self.icon.stop()
+        if self.settings_window:
+            self.settings_window.destroy()
+
+
+class SettingsWindow(tk.Toplevel):
+    """
+    设置窗口类, 用于显示和修改应用程序配置。
+    """
+
+    def __init__(self, tray_icon):
+        """
+        初始化设置窗口。
+
+        Args:
+            tray_icon (pystray.Icon): 任务栏图标实例。
+        """
+        super().__init__()
+        self.tray_icon = tray_icon
+        self.title("设置")
+        self.geometry("800x600")
+        self.protocol("WM_DELETE_WINDOW", self._on_closing)
+        self.config_entries = {}
+        self._load_config_to_ui()
+        self._create_widgets()
+
+    def _load_config_to_ui(self):
+        """
+        从 Config 类加载配置到 UI 界面。
+        """
+        config = Config()
+        for key in dir(config):
+            if not key.startswith('_') and key.isupper():
+                value = getattr(config, key)
+                self.config_entries[key] = tk.StringVar(value=str(value))
+
+    def _create_widgets(self):
+        """
+        创建设置窗口的 UI 控件。
+        """
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        row = 0
+        for key, var in self.config_entries.items():
+            ttk.Label(scrollable_frame, text=key + ":").grid(row=row, column=0, sticky="w", pady=2)
+            entry = ttk.Entry(scrollable_frame, textvariable=var, width=40)
+            entry.grid(row=row, column=1, sticky="ew", pady=2)
+            row += 1
+
+        ttk.Button(main_frame, text="确认", command=self._save_config).pack(pady=10)
+
+    def _save_config(self):
+        """
+        保存修改后的配置到 config.yaml 文件。
+        """
+        updated_config = {}
+        for key, var in self.config_entries.items():
+            updated_config[key] = var.get()
+        
+        try:
+            Config().update_config_file(updated_config)
+            messagebox.showinfo("设置", "配置已保存成功！")
+            self.destroy()
+        except Exception as e:
+            messagebox.showerror("错误", f"保存配置失败: {e}")
+
+    def _on_closing(self):
+        """
+        处理窗口关闭事件。
+        """
+        self.withdraw()

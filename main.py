@@ -1,11 +1,14 @@
 import contextlib
 import ctypes
+import logging
 import multiprocessing
 import os
 import sys
 import threading
 import tkinter as tk
+from logging.handlers import QueueListener
 
+from config import setup_main_logging
 from event_manager import EventManager
 from ocr_processor import OCRProcessor
 from ui_manager import UIManager
@@ -24,17 +27,18 @@ class App:
     App 是应用程序的主类, 负责初始化和协调各个模块。
     """
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, log_queue: multiprocessing.Queue):
         """
         初始化 App。
 
         Args:
             root (tk.Tk): Tkinter 的根窗口。
+            log_queue (multiprocessing.Queue): 日志队列。
         """
         self.root = root
         self.running = True
 
-        self.ocr_processor = OCRProcessor(self.root)
+        self.ocr_processor = OCRProcessor(self.root, log_queue)
         self.ui_manager = UIManager(root, self.ocr_processor)
         self.event_manager = EventManager(self.on_exit)
 
@@ -42,7 +46,7 @@ class App:
         """
         程序退出时的处理函数, 停止所有线程并销毁窗口。
         """
-        print("Initiating shutdown...")
+        logging.info("Initiating shutdown...") # 使用 logging.info
         self.running = False
         self.ocr_processor.stop()
         self.ui_manager.stop()
@@ -75,6 +79,11 @@ def main():
     应用程序的入口点。
     初始化 Tkinter 窗口并启动 App。
     """
+    log_queue = setup_main_logging()
+    # 从队列中获取日志记录的监听器
+    log_listener = QueueListener(log_queue, *logging.getLogger().handlers)
+    log_listener.start()
+
     with contextlib.suppress(AttributeError, OSError):
         ctypes.windll.shcore.SetProcessDpiAwareness(2)  # 设置 DPI 感知
 
@@ -88,8 +97,11 @@ def main():
     screen_height = root.winfo_screenheight()  # 获取屏幕高度
     root.geometry(f"{screen_width}x{screen_height}+0+0")  # 窗口大小和位置
 
-    app = App(root)
+    app = App(root, log_queue)
     app.start()
+
+    # 停止日志监听器
+    log_listener.stop()
 
 
 if __name__ == "__main__":

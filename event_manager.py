@@ -1,9 +1,11 @@
+import logging
+import tkinter as tk
+from tkinter import messagebox, ttk
+
 import pystray
 from PIL import Image
 from pynput import keyboard
 from win10toast_persist import ToastNotifier
-import tkinter as tk
-from tkinter import ttk, messagebox
 
 from config import Config
 
@@ -30,6 +32,7 @@ class EventManager:
         """
         设置任务栏图标和菜单。
         """
+        logging.info("启动托盘图标...") # 使用 logging.info
         image = Image.open("icon.png")
         menu = (pystray.MenuItem('设置', self.open_settings),
                 pystray.MenuItem('退出', self.on_exit_callback),)
@@ -40,6 +43,7 @@ class EventManager:
         """
         打开设置窗口。
         """
+        logging.info("打开设置窗口...") # 使用 logging.info
         if self.settings_window is None or not self.settings_window.winfo_exists():
             self.settings_window = SettingsWindow(self.icon)
         self.settings_window.deiconify()
@@ -49,6 +53,7 @@ class EventManager:
         """
         启动键盘监听器, 监听停止热键。
         """
+        logging.info(f"启动键盘监听器, 监听热键: {Config().STOP_HOTKEY}") # 使用 logging.info
         hotkey = keyboard.HotKey(
             keyboard.HotKey.parse(Config().STOP_HOTKEY),
             self.on_exit_callback
@@ -80,12 +85,16 @@ class EventManager:
         """
         停止事件管理器, 包括键盘监听和任务栏图标。
         """
+        logging.info("停止事件管理器...") # 使用 logging.info
         if self.listener:
             self.listener.stop()
+            logging.info("键盘监听器已停止。") # 使用 logging.info
         if self.icon:
             self.icon.stop()
+            logging.info("托盘图标已停止。") # 使用 logging.info
         if self.settings_window:
             self.settings_window.destroy()
+            logging.info("设置窗口已销毁。") # 使用 logging.info
 
 
 class SettingsWindow(tk.Toplevel):
@@ -108,6 +117,7 @@ class SettingsWindow(tk.Toplevel):
         self.config_entries = {}
         self._load_config_to_ui()
         self._create_widgets()
+        logging.info("设置窗口已初始化。") # 使用 logging.info
 
     def _load_config_to_ui(self):
         """
@@ -143,32 +153,37 @@ class SettingsWindow(tk.Toplevel):
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        row = 0
-        for key, var in self.config_entries.items():
-            ttk.Label(scrollable_frame, text=key + ":").grid(row=row, column=0, sticky="w", pady=2)
+        for row_idx, (key, var) in enumerate(self.config_entries.items()):
+            ttk.Label(scrollable_frame, text=key + ":").grid(row=row_idx, column=0, sticky="w", pady=2)
             entry = ttk.Entry(scrollable_frame, textvariable=var, width=40)
-            entry.grid(row=row, column=1, sticky="ew", pady=2)
-            row += 1
+            entry.grid(row=row_idx, column=1, sticky="ew", pady=2)
 
         ttk.Button(main_frame, text="确认", command=self._save_config).pack(pady=10)
 
     def _save_config(self):
-        """
-        保存修改后的配置到 config.yaml 文件。
-        """
         updated_config = {}
         for key, var in self.config_entries.items():
-            updated_config[key] = var.get()
-        
+            value = var.get()
+            if key in ['CONF_THRESHOLD', 'PAR_CONF_THRESHOLD']:
+                updated_config[key] = int(value)
+            elif key == 'OCR_FPS':
+                updated_config[key] = float(value)
+            elif key == 'DEBUG_MODE':
+                updated_config[key] = value.lower() == 'true'
+            else:
+                updated_config[key] = value
         try:
             Config().update_config_file(updated_config)
-            messagebox.showinfo("设置", "配置已保存成功！")
+            logging.info("配置已保存成功!")  # 使用 logging.info
+            messagebox.showinfo("设置", "配置已保存成功!")
             self.destroy()
         except Exception as e:
+            logging.error(f"保存配置失败: {e}") # 使用 logging.error
             messagebox.showerror("错误", f"保存配置失败: {e}")
 
     def _on_closing(self):
         """
         处理窗口关闭事件。
         """
+        logging.info("设置窗口正在关闭...") # 使用 logging.info
         self.withdraw()

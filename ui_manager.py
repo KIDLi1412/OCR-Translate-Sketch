@@ -1,3 +1,4 @@
+import logging  # 导入 logging 模块
 import tkinter as tk
 
 import mouse
@@ -87,4 +88,5 @@ class UIManager:
         """
         停止 UI 更新循环。
         """
+        logging.info("停止 UI 更新循环...") # 使用 logging.info
         self.running = False

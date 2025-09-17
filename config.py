@@ -1,88 +1,121 @@
-"""
-config.py
-
-此文件包含 OCR-Translate-Sketch 应用程序的所有配置参数。
-通过修改此文件, 可以调整应用程序的行为, 而无需更改主程序逻辑。
-"""
-
-import yaml
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+import logging
+import logging.handlers  # 导入 logging.handlers 模块
+import multiprocessing
 import os
 import threading
+import time
+from logging import INFO, FileHandler, Formatter, StreamHandler, getLogger
+from logging.handlers import QueueHandler
 
-# NOTE: 配置文件路径
+import yaml
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+# 配置文件路径
 CONFIG_FILE = 'config.yaml'
+LOG_DIR = 'log'
+
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+def setup_logging(queue: multiprocessing.Queue) -> None:
+    """
+    配置日志记录, 将日志发送到队列。
+
+    Args:
+        queue (multiprocessing.Queue): 用于日志记录的队列。
+    """
+    # 获取根日志记录器
+    logger = getLogger()
+    logger.setLevel(INFO)
+
+    # 创建队列处理器
+    queue_handler = QueueHandler(queue)
+
+    # 为根日志记录器添加队列处理器
+    logger.addHandler(queue_handler)
+
+
+def setup_main_logging() -> multiprocessing.Queue:
+    """
+    在主进程中配置日志记录。
+    """
+    # 创建一个队列
+    log_queue = multiprocessing.Queue(-1)
+
+    # 创建流处理器和文件处理器
+    stream_handler = StreamHandler()
+    file_handler = FileHandler(os.path.join(LOG_DIR, f"{time.strftime('%Y%m%d')}.log"), mode="w", encoding="utf-8")
+
+    # 创建格式化器
+    formatter = Formatter(
+        "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
+    )
+    stream_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # 获取根日志记录器
+    logger = getLogger()
+    logger.setLevel(INFO)
+
+    # 添加处理器
+    logger.addHandler(stream_handler)
+    logger.addHandler(file_handler)
+
+    return log_queue
+
 
 class Config:
-    """
-    应用程序配置类。
-    从 config.yaml 加载配置, 并支持热加载。
-    """
-
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super(Config, cls).__new__(cls)
-                    cls._instance._load_config()
-                    cls._instance._start_watcher()
+    # 定义配置项及其预期类型
+    _config_types = {
+        'TESSERACT_CMD': str,
+        'OCR_LANGUAGE': str,
+        'CONF_THRESHOLD': int,
+        'PAR_CONF_THRESHOLD': int,
+        'OCR_FPS': float,
+        'DEBUG_MODE': bool,
+        'STOP_HOTKEY': str,
+        'UI_UPDATE_INTERVAL': int,
+        'HIGHLIGHT_RECT_OUTLINE_COLOR': str,
+        'HIGHLIGHT_RECT_OUTLINE_WIDTH': int,
+        'DEBUG_RECT_OUTLINE_COLOR': str,
+        'DEBUG_RECT_OUTLINE_WIDTH': int,
+        'LOG_LEVEL': str,
+    }
+
+    def __new__(cls, *args, **kwargs):
+        with cls._lock:
+            if not cls._instance:
+                cls._instance = super().__new__(cls)
+                cls._instance._load_config()
+                cls._instance._start_watcher()  # 启动文件观察器
         return cls._instance
 
     def _load_config(self):
         """
-        从 config.yaml 文件加载配置。
+        加载配置文件。
         """
         try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            with open(CONFIG_FILE, encoding="utf-8") as f:
                 config_data = yaml.safe_load(f)
-                for key, value in config_data.items():
-                    setattr(self, key, value)
-            print(f"配置已从 {CONFIG_FILE} 重新加载。")
-        except FileNotFoundError:
-            print(f"错误: 配置文件 {CONFIG_FILE} 未找到。")
-        except Exception as e:
-            print(f"加载配置文件时发生错误: {e}")
-
-    def update_config_file(self, updated_config):
-        """
-        更新 config.yaml 文件中的配置。
-
-        Args:
-            updated_config (dict): 包含要更新的配置项的字典。
-        """
-        try:
-            # 读取现有配置以保留未修改的项
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                current_config = yaml.safe_load(f)
-            
-            if current_config is None:
-                current_config = {}
-
-            # 更新配置
-            for key, value in updated_config.items():
-                # 尝试将字符串值转换回原始类型 (例如, int, bool)
-                if isinstance(value, str):
-                    if value.lower() == 'true':
-                        current_config[key] = True
-                    elif value.lower() == 'false':
-                        current_config[key] = False
-                    elif value.isdigit():
-                        current_config[key] = int(value)
-                    else:
-                        current_config[key] = value
+                if config_data is not None:  # 检查 config_data 是否为 None
+                    for key, value in config_data.items():
+                        if key in self._config_types:
+                            expected_type = self._config_types[key]
+                            if expected_type == bool:
+                                setattr(self, key, str(value).lower() == 'true')
+                            else:
+                                setattr(self, key, expected_type(value))
+                        else:
+                            setattr(self, key, value)
+                    logging.info(f"配置已从 {CONFIG_FILE} 重新加载。")
                 else:
-                    current_config[key] = value
-
-            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                yaml.safe_dump(current_config, f, allow_unicode=True)
-            print(f"配置已成功保存到 {CONFIG_FILE}。")
-            self._load_config()  # 重新加载配置到当前实例
-        except Exception as e:
-            print(f"保存配置文件时发生错误: {e}")
+                    logging.info(f"配置文件 {CONFIG_FILE} 为空或不包含任何配置。")
+        except (FileNotFoundError, yaml.YAMLError) as e:
+            logging.error(f"加载配置文件时出错: {e}")
 
     def _start_watcher(self):
         """
@@ -92,7 +125,39 @@ class Config:
         observer = Observer()
         observer.schedule(event_handler, path=os.path.dirname(CONFIG_FILE) or '.', recursive=False)
         observer.start()
-        print(f"正在监听 {CONFIG_FILE} 的变化...")
+        logging.info(f"正在监听 {CONFIG_FILE} 的变化...") # 使用 logging.info
+
+    def update_config_file(self, new_config: dict) -> None:
+        """
+        更新配置并将其写入配置文件。
+
+        Args:
+            new_config (dict): 包含要更新的配置项的字典。
+        """
+        with self._lock:
+            # 更新当前配置并进行类型转换
+            converted_config = {}
+            for key, value in new_config.items():
+                if key in self._config_types:
+                    expected_type = self._config_types[key]
+                    if expected_type == bool:
+                        converted_value = str(value).lower() == 'true'
+                    else:
+                        converted_value = expected_type(value)
+                    setattr(self, key, converted_value)
+                    converted_config[key] = converted_value
+                else:
+                    setattr(self, key, value)
+                    converted_config[key] = value
+
+            # 将更新后的配置写入文件
+            try:
+                with open(CONFIG_FILE, 'w', encoding="utf-8") as f:
+                    yaml.safe_dump(converted_config, f, allow_unicode=True)
+                logging.info(f"配置已更新并保存到 {CONFIG_FILE}。")
+            except Exception as e:
+                logging.error(f"保存配置文件时出错: {e}")
+
 
 class ConfigFileEventHandler(FileSystemEventHandler):
     """
@@ -107,6 +172,6 @@ class ConfigFileEventHandler(FileSystemEventHandler):
         当配置文件被修改时重新加载配置。
         """
         if not event.is_directory and os.path.basename(event.src_path) == CONFIG_FILE:
-            print(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...")
+            logging.info(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...") # 使用 logging.info
             self.config_instance._load_config()
 

@@ -8,7 +8,8 @@ import pandas as pd
 import pytesseract
 from PIL import ImageGrab
 
-from config import Config, setup_logging
+from config import Config
+from logging_utils import setup_logging
 
 OCR_EVENT = "<<OCRComplete>>"
 

@@ -8,8 +8,9 @@ import threading
 import tkinter as tk
 from logging.handlers import QueueListener
 
-from config import Config, get_log_level, setup_main_logging
+from config import Config
 from event_manager import EventManager
+from logging_utils import get_log_level, setup_main_logging
 from ocr_processor import OCRProcessor
 from ui_manager import UIManager
 

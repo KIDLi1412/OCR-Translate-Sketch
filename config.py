@@ -1,33 +1,48 @@
 import logging
-import logging.handlers  # 导入 logging.handlers 模块
 import multiprocessing
 import os
 import threading
 import time
 from logging import INFO, FileHandler, Formatter, StreamHandler, getLogger
 from logging.handlers import QueueHandler
+from typing import ClassVar
 
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 # 配置文件路径
-CONFIG_FILE = 'config.yaml'
-LOG_DIR = 'log'
+CONFIG_FILE = "config.yaml"
+LOG_DIR = "log"
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
-def setup_logging(queue: multiprocessing.Queue) -> None:
+
+def get_log_level(level_str: str) -> int:
+    """
+    将日志级别字符串转换为 logging 级别常量。
+
+    Args:
+        level_str (str): 日志级别字符串 (例如, "DEBUG", "INFO", "WARNING")。
+
+    Returns:
+        int: 对应的 logging 级别常量。
+    """
+    return getattr(logging, level_str.upper(), INFO)
+
+
+def setup_logging(queue: multiprocessing.Queue, log_level: int) -> None:
     """
     配置日志记录, 将日志发送到队列。
 
     Args:
         queue (multiprocessing.Queue): 用于日志记录的队列。
+        log_level (int): 日志级别。
     """
     # 获取根日志记录器
     logger = getLogger()
-    logger.setLevel(INFO)
+    logger.setLevel(log_level)
 
     # 创建队列处理器
     queue_handler = QueueHandler(queue)
@@ -36,9 +51,12 @@ def setup_logging(queue: multiprocessing.Queue) -> None:
     logger.addHandler(queue_handler)
 
 
-def setup_main_logging() -> multiprocessing.Queue:
+def setup_main_logging(log_level: int) -> multiprocessing.Queue:
     """
     在主进程中配置日志记录。
+
+    Args:
+        log_level (int): 日志级别。
     """
     # 创建一个队列
     log_queue = multiprocessing.Queue(-1)
@@ -48,15 +66,13 @@ def setup_main_logging() -> multiprocessing.Queue:
     file_handler = FileHandler(os.path.join(LOG_DIR, f"{time.strftime('%Y%m%d')}.log"), mode="w", encoding="utf-8")
 
     # 创建格式化器
-    formatter = Formatter(
-        "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
-    )
+    formatter = Formatter("%(asctime)s - %(processName)s - %(levelname)s - %(message)s")
     stream_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
     # 获取根日志记录器
     logger = getLogger()
-    logger.setLevel(INFO)
+    logger.setLevel(log_level)
 
     # 添加处理器
     logger.addHandler(stream_handler)
@@ -70,20 +86,20 @@ class Config:
     _lock = threading.Lock()
 
     # 定义配置项及其预期类型
-    _config_types = {
-        'TESSERACT_CMD': str,
-        'OCR_LANGUAGE': str,
-        'CONF_THRESHOLD': int,
-        'PAR_CONF_THRESHOLD': int,
-        'OCR_FPS': float,
-        'DEBUG_MODE': bool,
-        'STOP_HOTKEY': str,
-        'UI_UPDATE_INTERVAL': int,
-        'HIGHLIGHT_RECT_OUTLINE_COLOR': str,
-        'HIGHLIGHT_RECT_OUTLINE_WIDTH': int,
-        'DEBUG_RECT_OUTLINE_COLOR': str,
-        'DEBUG_RECT_OUTLINE_WIDTH': int,
-        'LOG_LEVEL': str,
+    _config_types: ClassVar[dict] = {
+        "TESSERACT_CMD": str,
+        "OCR_LANGUAGE": str,
+        "CONF_THRESHOLD": int,
+        "PAR_CONF_THRESHOLD": int,
+        "OCR_FPS": float,
+        "DEBUG_MODE": bool,
+        "STOP_HOTKEY": str,
+        "UI_UPDATE_INTERVAL": int,
+        "HIGHLIGHT_RECT_OUTLINE_COLOR": str,
+        "HIGHLIGHT_RECT_OUTLINE_WIDTH": int,
+        "DEBUG_RECT_OUTLINE_COLOR": str,
+        "DEBUG_RECT_OUTLINE_WIDTH": int,
+        "LOG_LEVEL": str,
     }
 
     def __new__(cls, *args, **kwargs):
@@ -105,8 +121,8 @@ class Config:
                     for key, value in config_data.items():
                         if key in self._config_types:
                             expected_type = self._config_types[key]
-                            if expected_type == bool:
-                                setattr(self, key, str(value).lower() == 'true')
+                            if expected_type is bool:
+                                setattr(self, key, str(value).lower() == "true")
                             else:
                                 setattr(self, key, expected_type(value))
                         else:
@@ -123,9 +139,9 @@ class Config:
         """
         event_handler = ConfigFileEventHandler(self)
         observer = Observer()
-        observer.schedule(event_handler, path=os.path.dirname(CONFIG_FILE) or '.', recursive=False)
+        observer.schedule(event_handler, path=os.path.dirname(CONFIG_FILE) or ".", recursive=False)
         observer.start()
-        logging.info(f"正在监听 {CONFIG_FILE} 的变化...") # 使用 logging.info
+        logging.info(f"正在监听 {CONFIG_FILE} 的变化...")  # 使用 logging.info
 
     def update_config_file(self, new_config: dict) -> None:
         """
@@ -140,10 +156,7 @@ class Config:
             for key, value in new_config.items():
                 if key in self._config_types:
                     expected_type = self._config_types[key]
-                    if expected_type == bool:
-                        converted_value = str(value).lower() == 'true'
-                    else:
-                        converted_value = expected_type(value)
+                    converted_value = str(value).lower() == "true" if expected_type is bool else expected_type(value)
                     setattr(self, key, converted_value)
                     converted_config[key] = converted_value
                 else:
@@ -152,7 +165,7 @@ class Config:
 
             # 将更新后的配置写入文件
             try:
-                with open(CONFIG_FILE, 'w', encoding="utf-8") as f:
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                     yaml.safe_dump(converted_config, f, allow_unicode=True)
                 logging.info(f"配置已更新并保存到 {CONFIG_FILE}。")
             except Exception as e:
@@ -163,6 +176,7 @@ class ConfigFileEventHandler(FileSystemEventHandler):
     """
     处理配置文件变化的事件。
     """
+
     def __init__(self, config_instance):
         super().__init__()
         self.config_instance = config_instance
@@ -172,6 +186,5 @@ class ConfigFileEventHandler(FileSystemEventHandler):
         当配置文件被修改时重新加载配置。
         """
         if not event.is_directory and os.path.basename(event.src_path) == CONFIG_FILE:
-            logging.info(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...") # 使用 logging.info
+            logging.info(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...")  # 使用 logging.info
             self.config_instance._load_config()
-

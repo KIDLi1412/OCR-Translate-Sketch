@@ -28,7 +28,7 @@ class UIManager:
         self.running = True
         self.ocr_data = pd.DataFrame()
 
-        self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
+        self.canvas = tk.Canvas(root, bg="white", highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self.root.bind(OCR_EVENT, self.on_ocr_complete)
@@ -49,27 +49,28 @@ class UIManager:
         if not self.ocr_data.empty:
             # 绘制 OCR 识别结果
             for _index, row in self.ocr_data.iterrows():
-                left, top, width, height = row['left'], row['top'], row['width'], row['height']
+                left, top, width, height = row["left"], row["top"], row["width"], row["height"]
 
                 if left <= x <= left + width and top <= y <= top + height:
                     self.canvas.create_rectangle(
-                        left, top, left + width, top + height,
+                        left,
+                        top,
+                        left + width,
+                        top + height,
                         outline=Config().HIGHLIGHT_RECT_OUTLINE_COLOR,
-                        width=Config().HIGHLIGHT_RECT_OUTLINE_WIDTH
+                        width=Config().HIGHLIGHT_RECT_OUTLINE_WIDTH,
                     )
                     self.canvas.create_text(
-                        left,
-                        top + height + 10,
-                        text=row['text'],
-                        fill='red',
-                        anchor='nw',
-                        font=("Arial", 12, "bold")
+                        left, top + height + 10, text=row["text"], fill="red", anchor="nw", font=("Arial", 12, "bold")
                     )
                 elif self.debug_mode:
                     self.canvas.create_rectangle(
-                        left, top, left + width, top + height,
+                        left,
+                        top,
+                        left + width,
+                        top + height,
                         outline=Config().DEBUG_RECT_OUTLINE_COLOR,
-                        width=Config().DEBUG_RECT_OUTLINE_WIDTH
+                        width=Config().DEBUG_RECT_OUTLINE_WIDTH,
                     )
 
         if self.running:
@@ -88,5 +89,5 @@ class UIManager:
         """
         停止 UI 更新循环。
         """
-        logging.info("停止 UI 更新循环...") # 使用 logging.info
+        logging.info("停止 UI 更新循环...")  # 使用 logging.info
         self.running = False

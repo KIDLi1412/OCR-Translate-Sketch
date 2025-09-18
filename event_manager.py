@@ -32,10 +32,12 @@ class EventManager:
         """
         设置任务栏图标和菜单。
         """
-        logging.info("启动托盘图标...") # 使用 logging.info
+        logging.info("启动托盘图标...")  # 使用 logging.info
         image = Image.open("icon.png")
-        menu = (pystray.MenuItem('设置', self.open_settings),
-                pystray.MenuItem('退出', self.on_exit_callback),)
+        menu = (
+            pystray.MenuItem("设置", self.open_settings),
+            pystray.MenuItem("退出", self.on_exit_callback),
+        )
         self.icon = pystray.Icon("OCR-Translate-Sketch", image, "OCR-Translate-Sketch", menu)
         self.icon.run_detached()
 
@@ -43,7 +45,7 @@ class EventManager:
         """
         打开设置窗口。
         """
-        logging.info("打开设置窗口...") # 使用 logging.info
+        logging.info("打开设置窗口...")  # 使用 logging.info
         if self.settings_window is None or not self.settings_window.winfo_exists():
             self.settings_window = SettingsWindow(self.icon)
         self.settings_window.deiconify()
@@ -53,11 +55,8 @@ class EventManager:
         """
         启动键盘监听器, 监听停止热键。
         """
-        logging.info(f"启动键盘监听器, 监听热键: {Config().STOP_HOTKEY}") # 使用 logging.info
-        hotkey = keyboard.HotKey(
-            keyboard.HotKey.parse(Config().STOP_HOTKEY),
-            self.on_exit_callback
-        )
+        logging.info(f"启动键盘监听器, 监听热键: {Config().STOP_HOTKEY}")  # 使用 logging.info
+        hotkey = keyboard.HotKey(keyboard.HotKey.parse(Config().STOP_HOTKEY), self.on_exit_callback)
 
         def on_press(key):
             hotkey.press(self.listener.canonical(key))
@@ -85,16 +84,16 @@ class EventManager:
         """
         停止事件管理器, 包括键盘监听和任务栏图标。
         """
-        logging.info("停止事件管理器...") # 使用 logging.info
+        logging.info("停止事件管理器...")  # 使用 logging.info
         if self.listener:
             self.listener.stop()
-            logging.info("键盘监听器已停止。") # 使用 logging.info
+            logging.info("键盘监听器已停止。")  # 使用 logging.info
         if self.icon:
             self.icon.stop()
-            logging.info("托盘图标已停止。") # 使用 logging.info
+            logging.info("托盘图标已停止。")  # 使用 logging.info
         if self.settings_window:
             self.settings_window.destroy()
-            logging.info("设置窗口已销毁。") # 使用 logging.info
+            logging.info("设置窗口已销毁。")  # 使用 logging.info
 
 
 class SettingsWindow(tk.Toplevel):
@@ -117,7 +116,7 @@ class SettingsWindow(tk.Toplevel):
         self.config_entries = {}
         self._load_config_to_ui()
         self._create_widgets()
-        logging.info("设置窗口已初始化。") # 使用 logging.info
+        logging.info("设置窗口已初始化。")  # 使用 logging.info
 
     def _load_config_to_ui(self):
         """
@@ -125,7 +124,7 @@ class SettingsWindow(tk.Toplevel):
         """
         config = Config()
         for key in dir(config):
-            if not key.startswith('_') and key.isupper():
+            if not key.startswith("_") and key.isupper():
                 value = getattr(config, key)
                 self.config_entries[key] = tk.StringVar(value=str(value))
 
@@ -140,12 +139,7 @@ class SettingsWindow(tk.Toplevel):
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
 
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
@@ -164,12 +158,12 @@ class SettingsWindow(tk.Toplevel):
         updated_config = {}
         for key, var in self.config_entries.items():
             value = var.get()
-            if key in ['CONF_THRESHOLD', 'PAR_CONF_THRESHOLD']:
+            if key in ["CONF_THRESHOLD", "PAR_CONF_THRESHOLD"]:
                 updated_config[key] = int(value)
-            elif key == 'OCR_FPS':
+            elif key == "OCR_FPS":
                 updated_config[key] = float(value)
-            elif key == 'DEBUG_MODE':
-                updated_config[key] = value.lower() == 'true'
+            elif key == "DEBUG_MODE":
+                updated_config[key] = value.lower() == "true"
             else:
                 updated_config[key] = value
         try:
@@ -178,12 +172,12 @@ class SettingsWindow(tk.Toplevel):
             messagebox.showinfo("设置", "配置已保存成功!")
             self.destroy()
         except Exception as e:
-            logging.error(f"保存配置失败: {e}") # 使用 logging.error
+            logging.error(f"保存配置失败: {e}")  # 使用 logging.error
             messagebox.showerror("错误", f"保存配置失败: {e}")
 
     def _on_closing(self):
         """
         处理窗口关闭事件。
         """
-        logging.info("设置窗口正在关闭...") # 使用 logging.info
+        logging.info("设置窗口正在关闭...")  # 使用 logging.info
         self.withdraw()

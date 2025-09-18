@@ -8,7 +8,7 @@ import threading
 import tkinter as tk
 from logging.handlers import QueueListener
 
-from config import Config
+from config import config
 from event_manager import EventManager
 from logging_utils import get_log_level, setup_main_logging
 from ocr_processor import OCRProcessor
@@ -79,7 +79,6 @@ def main():
     应用程序的入口点。
     初始化 Tkinter 窗口并启动 App。
     """
-    config = Config()
     log_level = get_log_level(config.LOG_LEVEL)
     log_queue = setup_main_logging(log_level)
     # 从队列中获取日志记录的监听器

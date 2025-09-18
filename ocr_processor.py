@@ -8,7 +8,7 @@ import pandas as pd
 import pytesseract
 from PIL import ImageGrab
 
-from config import Config
+from config import config
 from logging_utils import setup_logging
 
 OCR_EVENT = "<<OCRComplete>>"
@@ -25,7 +25,6 @@ def ocr_process(
     持续捕获屏幕, 使用 Tesseract 进行 OCR 识别, 并将结果放入队列。
     """
     setup_logging(log_queue, log_level)
-    config = Config()
     TARGET_INTERVAL = 1.0 / config.OCR_FPS
 
     while running_flag.value:
@@ -164,7 +163,7 @@ class OCRProcessor:
         ocr_pars_df = merged_pars.reset_index()
 
         # 过滤掉低置信度的段落
-        return ocr_pars_df[ocr_pars_df["conf"] > Config().PAR_CONF_THRESHOLD]
+        return ocr_pars_df[ocr_pars_df["conf"] > config.PAR_CONF_THRESHOLD]
 
     def stop(self):
         """

@@ -7,7 +7,7 @@ from PIL import Image
 from pynput import keyboard
 from win10toast_persist import ToastNotifier
 
-from config import Config
+from config import config
 
 
 class EventManager:
@@ -55,8 +55,8 @@ class EventManager:
         """
         启动键盘监听器, 监听停止热键。
         """
-        logging.info(f"启动键盘监听器, 监听热键: {Config().STOP_HOTKEY}")  # 使用 logging.info
-        hotkey = keyboard.HotKey(keyboard.HotKey.parse(Config().STOP_HOTKEY), self.on_exit_callback)
+        logging.info(f"启动键盘监听器, 监听热键: {config.STOP_HOTKEY}")  # 使用 logging.info
+        hotkey = keyboard.HotKey(keyboard.HotKey.parse(config.STOP_HOTKEY), self.on_exit_callback)
 
         def on_press(key):
             hotkey.press(self.listener.canonical(key))
@@ -75,7 +75,7 @@ class EventManager:
         toaster = ToastNotifier()
         toaster.show_toast(
             "OCR-Translate-Sketch",
-            "程序已启动, 按 " + Config().STOP_HOTKEY + " 停止",
+            f"程序已启动, 按 {config.STOP_HOTKEY} 停止",
             duration=5,
             threaded=True,
         )
@@ -122,7 +122,6 @@ class SettingsWindow(tk.Toplevel):
         """
         从 Config 类加载配置到 UI 界面。
         """
-        config = Config()
         for key in dir(config):
             if not key.startswith("_") and key.isupper():
                 value = getattr(config, key)
@@ -167,7 +166,7 @@ class SettingsWindow(tk.Toplevel):
             else:
                 updated_config[key] = value
         try:
-            Config().update_config_file(updated_config)
+            config.update_config_file(updated_config)
             logging.info("配置已保存成功!")  # 使用 logging.info
             messagebox.showinfo("设置", "配置已保存成功!")
             self.destroy()

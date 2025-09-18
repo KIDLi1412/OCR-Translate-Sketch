@@ -11,10 +11,7 @@ from watchdog.observers import Observer
 CONFIG_FILE = "config.yaml"
 
 
-class Config:
-    _instance = None
-    _lock = threading.Lock()
-
+class _Config:
     # 定义配置项及其预期类型
     _config_types: ClassVar[dict] = {
         "TESSERACT_CMD": str,
@@ -32,13 +29,13 @@ class Config:
         "LOG_LEVEL": str,
     }
 
-    def __new__(cls, *args, **kwargs):
-        with cls._lock:
-            if not cls._instance:
-                cls._instance = super().__new__(cls)
-                cls._instance._load_config()
-                cls._instance._start_watcher()  # 启动文件观察器
-        return cls._instance
+    def __init__(self):
+        """
+        _Config 类的构造函数。
+        初始化配置并启动文件观察器。
+        """
+        self._load_config()
+        self._start_watcher()  # 启动文件观察器
 
     def _set_attribute(self, key: str, value: Any) -> None:
         """
@@ -89,6 +86,34 @@ class Config:
         except yaml.YAMLError as e:
             logging.error(f"加载配置文件 {CONFIG_FILE} 时出错: {e}")
 
+    def update_config_file(self, new_config: dict) -> None:
+        """
+        更新配置并将其写入配置文件。
+
+        Args:
+            new_config (dict): 包含要更新的配置项的字典。
+        """
+        # 更新当前配置并进行类型转换
+        converted_config = {}
+        for key, value in new_config.items():
+            if key in self._config_types:
+                expected_type = self._config_types[key]
+                converted_value = str(value).lower() == "true" if expected_type is bool else expected_type(value)
+                setattr(self, key, converted_value)
+                converted_config[key] = converted_value
+            else:
+                setattr(self, key, value)
+                converted_config[key] = value
+
+        # 将更新后的配置写入文件
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                yaml.safe_dump(converted_config, f, allow_unicode=True)
+            logging.info(f"配置已更新并保存到 {CONFIG_FILE}。")
+        except Exception as e:
+            logging.error(f"保存配置文件时出错: {e}")
+
+
     def _start_watcher(self):
         """
         启动文件系统观察器, 监听 config.yaml 的变化。
@@ -99,41 +124,19 @@ class Config:
         observer.start()
         logging.info(f"正在监听 {CONFIG_FILE} 的变化...")
 
-    def update_config_file(self, new_config: dict) -> None:
-        """
-        更新配置并将其写入配置文件。
-
-        Args:
-            new_config (dict): 包含要更新的配置项的字典。
-        """
-        with self._lock:
-            # 更新当前配置并进行类型转换
-            converted_config = {}
-            for key, value in new_config.items():
-                if key in self._config_types:
-                    expected_type = self._config_types[key]
-                    converted_value = str(value).lower() == "true" if expected_type is bool else expected_type(value)
-                    setattr(self, key, converted_value)
-                    converted_config[key] = converted_value
-                else:
-                    setattr(self, key, value)
-                    converted_config[key] = value
-
-            # 将更新后的配置写入文件
-            try:
-                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                    yaml.safe_dump(converted_config, f, allow_unicode=True)
-                logging.info(f"配置已更新并保存到 {CONFIG_FILE}。")
-            except Exception as e:
-                logging.error(f"保存配置文件时出错: {e}")
-
 
 class ConfigFileEventHandler(FileSystemEventHandler):
     """
     处理配置文件变化的事件。
     """
 
-    def __init__(self, config_instance):
+    def __init__(self, config_instance: _Config):
+        """
+        ConfigFileEventHandler 类的构造函数。
+
+        Args:
+            config_instance (_Config): _Config 类的实例。
+        """
         super().__init__()
         self.config_instance = config_instance
 
@@ -144,3 +147,6 @@ class ConfigFileEventHandler(FileSystemEventHandler):
         if not event.is_directory and os.path.basename(event.src_path) == CONFIG_FILE:
             logging.info(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...")
             self.config_instance._load_config()
+
+
+config = _Config()

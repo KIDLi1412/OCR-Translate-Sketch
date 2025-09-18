@@ -4,7 +4,7 @@ import tkinter as tk
 import mouse
 import pandas as pd
 
-from config import Config
+from config import config
 from ocr_processor import OCR_EVENT
 
 
@@ -24,7 +24,7 @@ class UIManager:
         """
         self.root = root
         self.ocr_data_provider = ocr_data_provider
-        self.debug_mode = Config().DEBUG_MODE
+        self.debug_mode = config.DEBUG_MODE
         self.running = True
         self.ocr_data = pd.DataFrame()
 
@@ -57,8 +57,8 @@ class UIManager:
                         top,
                         left + width,
                         top + height,
-                        outline=Config().HIGHLIGHT_RECT_OUTLINE_COLOR,
-                        width=Config().HIGHLIGHT_RECT_OUTLINE_WIDTH,
+                        outline=config.HIGHLIGHT_RECT_OUTLINE_COLOR,
+                        width=config.HIGHLIGHT_RECT_OUTLINE_WIDTH,
                     )
                     self.canvas.create_text(
                         left, top + height + 10, text=row["text"], fill="red", anchor="nw", font=("Arial", 12, "bold")
@@ -69,12 +69,12 @@ class UIManager:
                         top,
                         left + width,
                         top + height,
-                        outline=Config().DEBUG_RECT_OUTLINE_COLOR,
-                        width=Config().DEBUG_RECT_OUTLINE_WIDTH,
+                        outline=config.DEBUG_RECT_OUTLINE_COLOR,
+                        width=config.DEBUG_RECT_OUTLINE_WIDTH,
                     )
 
         if self.running:
-            self.root.after(Config().UI_UPDATE_INTERVAL, self.update_ui)
+            self.root.after(config.UI_UPDATE_INTERVAL, self.update_ui)
         else:
             self.root.quit()
 

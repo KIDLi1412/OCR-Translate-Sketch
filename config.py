@@ -144,7 +144,7 @@ class ConfigFileEventHandler(FileSystemEventHandler):
         """
         当配置文件被修改时重新加载配置。
         """
-        if not event.is_directory and os.path.basename(event.src_path) == CONFIG_FILE:
+        if not event.is_directory and os.path.basename(event.src_path) == os.path.basename(CONFIG_FILE):
             logging.info(f"检测到 {CONFIG_FILE} 发生变化, 正在重新加载配置...")
             self.config_instance._load_config()
 

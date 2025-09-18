@@ -9,4 +9,7 @@ wheels/
 # Virtual environments
 .venv
 
+# dev
+.vscode/
 log/
+.coverage

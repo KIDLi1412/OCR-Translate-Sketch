@@ -8,13 +8,12 @@ import os
 import tempfile
 import pytest
 import yaml
-from unittest import mock
 
 from config import CONFIG_FILE, ConfigFileEventHandler, _Config
 
 
 @pytest.fixture
-def config_setup_teardown():
+def config_setup_teardown(mocker): # Added mocker fixture
     """
     Sets up the environment before each test method execution.
     Creates a temporary directory and file to simulate config.yaml.
@@ -23,8 +22,9 @@ def config_setup_teardown():
     test_dir = tempfile.mkdtemp()
     test_config_path = os.path.join(test_dir, CONFIG_FILE)
 
-    patcher = mock.patch('config.CONFIG_FILE', test_config_path)
-    patcher.start()
+    # patcher = mock.patch('config.CONFIG_FILE', test_config_path) # Replaced with mocker.patch
+    mocker.patch('config.CONFIG_FILE', test_config_path)
+    # patcher.start() # Not needed with mocker
 
     yield test_config_path, test_dir  # Provide the path to the test config file and directory
 
@@ -209,13 +209,16 @@ def test_update_config_file(config_setup_teardown):
     assert updated_data["NEW_SETTING"] == "test_value"
 
 
-@mock.patch('config.Observer')
-def test_file_monitoring(MockObserver, config_setup_teardown):
+# @mocker.patch('config.Observer') # Replaced mock.patch with mocker.patch
+def test_file_monitoring(config_setup_teardown, mocker): # Removed MockObserver from arguments
     """
     Tests the file monitoring function.
     Verifies that the `on_modified` event correctly triggers configuration reloading
     when the configuration file is changed.
     """
+    # Patch config.Observer inside the function
+    mocker.patch('config.Observer')
+
     test_config_path, _ = config_setup_teardown
     initial_data = {
         "CONF_THRESHOLD": 70
@@ -226,7 +229,8 @@ def test_file_monitoring(MockObserver, config_setup_teardown):
     assert config_instance.CONF_THRESHOLD == 70
 
     event_handler = ConfigFileEventHandler(config_instance)
-    mock_event = mock.Mock()
+    # mock_event = mock.Mock() # Replaced with mocker.Mock()
+    mock_event = mocker.Mock()
     mock_event.is_directory = False
     mock_event.src_path = test_config_path
 

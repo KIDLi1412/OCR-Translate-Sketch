@@ -4,7 +4,6 @@ It ensures that log level retrieval and logging handler resets work as expected.
 """
 
 import logging
-from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 
 import pytest
 
@@ -33,30 +32,20 @@ def reset_logging_handlers():
             logger.propagate = True
 
 
-def test_get_log_level_valid_levels():
+@pytest.mark.parametrize(
+    "level_str, expected_level",
+    [
+        ("DEBUG", logging.DEBUG),
+        ("INFO", logging.INFO),
+        ("WARNING", logging.WARNING),
+        ("ERROR", logging.ERROR),
+        ("CRITICAL", logging.CRITICAL),
+        ("debug", logging.DEBUG),  # Case-insensitive test
+        ("info", logging.INFO),    # Case-insensitive test
+    ],
+)
+def test_get_log_level_valid_levels(level_str, expected_level):
     """
-    Tests `get_log_level` for valid log level strings.
-    Verifies correct conversion to logging module constants.
+    Tests `get_log_level` for valid log level strings (case-insensitive).
     """
-    assert get_log_level("DEBUG") == DEBUG
-    assert get_log_level("INFO") == INFO
-    assert get_log_level("WARNING") == WARNING
-    assert get_log_level("ERROR") == ERROR
-    assert get_log_level("CRITICAL") == CRITICAL
-
-
-def test_get_log_level_invalid_level():
-    """
-    Tests `get_log_level` for invalid log level strings.
-    Ensures fallback to `logging.INFO` for unrecognized levels.
-    """
-    assert get_log_level("INVALID") == INFO
-
-
-def test_get_log_level_case_insensitivity():
-    """
-    Tests `get_log_level` for case-insensitivity.
-    Verifies correct handling of mixed-case log level strings.
-    """
-    assert get_log_level("debug") == DEBUG
-    assert get_log_level("info") == INFO
+    assert get_log_level(level_str) == expected_level

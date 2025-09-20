@@ -37,8 +37,12 @@ select = [
 
 fixable = [
     "I",  # isort
+    "W292", # No newline at end of file
     "RUF022", # `__all__` is not sorted
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101"] # Use of assert detected.
 
 [dependency-groups]
 dev = [

@@ -1,3 +1,10 @@
+"""
+This module defines the EventManager and SettingsWindow classes for the OCR-Translate-Sketch application.
+
+- The `EventManager` handles keyboard listening, system tray icon management, and notifications.
+- The `SettingsWindow` provides a graphical user interface for viewing and modifying application settings.
+"""
+
 import logging
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -12,16 +19,15 @@ from config import config
 
 class EventManager:
     """
-    EventManager 类负责处理应用程序的事件, 包括键盘监听和任务栏图标。
-    它提供启动和停止这些事件监听的方法。
+    Manages application events such as keyboard input, system tray interactions, and notifications.
     """
 
     def __init__(self, on_exit_callback):
         """
-        初始化 EventManager。
+        Initializes the EventManager with an exit callback.
 
         Args:
-            on_exit_callback (function): 当程序退出时调用的回调函数。
+            on_exit_callback (function): Function to call when the application is requested to exit.
         """
         self.on_exit_callback = on_exit_callback
         self.listener = None
@@ -30,22 +36,24 @@ class EventManager:
 
     def start_tray_icon(self):
         """
-        设置任务栏图标和菜单。
+        Sets up and starts the system tray icon with a context menu.
+        The menu includes options to open settings and exit the application.
         """
-        logging.info("启动托盘图标...")  # 使用 logging.info
+        logging.info("Starting tray icon...")
         image = Image.open("icon.png")
         menu = (
-            pystray.MenuItem("设置", self.open_settings),
-            pystray.MenuItem("退出", self.on_exit_callback),
+            pystray.MenuItem("Settings", self.open_settings),
+            pystray.MenuItem("Exit", self.on_exit_callback),
         )
         self.icon = pystray.Icon("OCR-Translate-Sketch", image, "OCR-Translate-Sketch", menu)
         self.icon.run_detached()
 
     def open_settings(self):
         """
-        打开设置窗口。
+        Opens the application settings window.
+        Creates a new window if one doesn't exist or is closed; otherwise, brings the existing one to the foreground.
         """
-        logging.info("打开设置窗口...")  # 使用 logging.info
+        logging.info("Opening settings window...")
         if self.settings_window is None or not self.settings_window.winfo_exists():
             self.settings_window = SettingsWindow(self.icon)
         self.settings_window.deiconify()
@@ -53,15 +61,22 @@ class EventManager:
 
     def start_keyboard_listener(self):
         """
-        启动键盘监听器, 监听停止热键。
+        Starts a keyboard listener to monitor for the configured STOP_HOTKEY.
+        Triggers the `on_exit_callback` when the hotkey is pressed.
         """
-        logging.info(f"启动键盘监听器, 监听热键: {config.STOP_HOTKEY}")  # 使用 logging.info
+        logging.info(f"Starting keyboard listener, monitoring hotkey: {config.STOP_HOTKEY}")
         hotkey = keyboard.HotKey(keyboard.HotKey.parse(config.STOP_HOTKEY), self.on_exit_callback)
 
         def on_press(key):
+            """
+            Handles key press events for the keyboard listener.
+            """
             hotkey.press(self.listener.canonical(key))
 
         def on_release(key):
+            """
+            Handles key release events for the keyboard listener.
+            """
             hotkey.release(self.listener.canonical(key))
 
         with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
@@ -70,57 +85,59 @@ class EventManager:
 
     def start_notification(self):
         """
-        显示程序启动通知。
+        Displays a Windows 10 toast notification indicating the program has started
+        and how to stop it.
         """
         toaster = ToastNotifier()
         toaster.show_toast(
             "OCR-Translate-Sketch",
-            f"程序已启动, 按 {config.STOP_HOTKEY} 停止",
+            f"Program started, press {config.STOP_HOTKEY} to stop",
             duration=5,
             threaded=True,
         )
 
     def stop(self):
         """
-        停止事件管理器, 包括键盘监听和任务栏图标。
+        Stops all active components: keyboard listener, system tray icon, and settings window.
         """
-        logging.info("停止事件管理器...")  # 使用 logging.info
+        logging.info("Stopping event manager...")
         if self.listener:
             self.listener.stop()
-            logging.info("键盘监听器已停止。")  # 使用 logging.info
+            logging.info("Keyboard listener stopped.")
         if self.icon:
             self.icon.stop()
-            logging.info("托盘图标已停止。")  # 使用 logging.info
+            logging.info("Tray icon stopped.")
         if self.settings_window:
             self.settings_window.destroy()
-            logging.info("设置窗口已销毁。")  # 使用 logging.info
+            logging.info("Settings window destroyed.")
 
 
 class SettingsWindow(tk.Toplevel):
     """
-    设置窗口类, 用于显示和修改应用程序配置。
+    A Tkinter Toplevel window for displaying and modifying application configuration settings.
     """
 
     def __init__(self, tray_icon):
         """
-        初始化设置窗口。
+        Initializes the SettingsWindow.
 
         Args:
-            tray_icon (pystray.Icon): 任务栏图标实例。
+            tray_icon (pystray.Icon): The system tray icon instance.
         """
         super().__init__()
         self.tray_icon = tray_icon
-        self.title("设置")
+        self.title("Settings")
         self.geometry("800x600")
         self.protocol("WM_DELETE_WINDOW", self._on_closing)
         self.config_entries = {}
         self._load_config_to_ui()
         self._create_widgets()
-        logging.info("设置窗口已初始化。")  # 使用 logging.info
+        logging.info("Settings window initialized.")
 
     def _load_config_to_ui(self):
         """
-        从 Config 类加载配置到 UI 界面。
+        Loads configuration values from the `config` module into Tkinter `StringVar` objects
+        to populate the settings UI. Only uppercase attributes are considered.
         """
         for key in dir(config):
             if not key.startswith("_") and key.isupper():
@@ -129,7 +146,8 @@ class SettingsWindow(tk.Toplevel):
 
     def _create_widgets(self):
         """
-        创建设置窗口的 UI 控件。
+        Creates and arranges the widgets within the settings window,
+        including a scrollable frame for configuration entries and a save button.
         """
         main_frame = ttk.Frame(self, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -151,9 +169,13 @@ class SettingsWindow(tk.Toplevel):
             entry = ttk.Entry(scrollable_frame, textvariable=var, width=40)
             entry.grid(row=row_idx, column=1, sticky="ew", pady=2)
 
-        ttk.Button(main_frame, text="确认", command=self._save_config).pack(pady=10)
+        ttk.Button(main_frame, text="Confirm", command=self._save_config).pack(pady=10)
 
     def _save_config(self):
+        """
+        Saves the configuration settings from the UI to the `config` module.
+        Handles type conversion and provides user feedback.
+        """
         updated_config = {}
         for key, var in self.config_entries.items():
             value = var.get()
@@ -167,16 +189,17 @@ class SettingsWindow(tk.Toplevel):
                 updated_config[key] = value
         try:
             config.update_config_file(updated_config)
-            logging.info("配置已保存成功!")  # 使用 logging.info
-            messagebox.showinfo("设置", "配置已保存成功!")
+            logging.info("Configuration saved successfully!")
+            messagebox.showinfo("Settings", "Configuration saved successfully!")
             self.destroy()
         except Exception as e:
-            logging.error(f"保存配置失败: {e}")  # 使用 logging.error
-            messagebox.showerror("错误", f"保存配置失败: {e}")
+            logging.error(f"Failed to save configuration: {e}")
+            messagebox.showerror("Error", f"Failed to save configuration: {e}")
 
     def _on_closing(self):
         """
-        处理窗口关闭事件。
+        Handles the window closing event by hiding the window instead of destroying it.
+        This allows the window to be re-opened without re-initialization.
         """
-        logging.info("设置窗口正在关闭...")  # 使用 logging.info
+        logging.info("Settings window is closing...")
         self.withdraw()

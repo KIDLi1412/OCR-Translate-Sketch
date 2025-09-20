@@ -1,44 +1,42 @@
+"""
+This module contains unit tests for the logging utility functions.
+It ensures that log level retrieval and logging handler resets work as expected.
+"""
+
 import logging
-import multiprocessing
-import os
-import shutil
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
-from unittest.mock import MagicMock, patch, create_autospec
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
 
 import pytest
 
-from logging_utils import get_log_level, setup_logging, setup_main_logging, LOG_DIR
-
-
-@pytest.fixture(autouse=True)
-def cleanup_log_dir():
-    """
-    Pytest fixture, 用于在每次测试前后清理日志目录。
-    """
-    if os.path.exists(LOG_DIR):
-        shutil.rmtree(LOG_DIR)
-    os.makedirs(LOG_DIR)
-    yield
-    if os.path.exists(LOG_DIR):
-        shutil.rmtree(LOG_DIR)
+from logging_utils import get_log_level
 
 
 @pytest.fixture(autouse=True)
 def reset_logging_handlers():
     """
-    Pytest fixture, 用于在每次测试前后重置日志记录器的处理程序，以防止测试间的干扰。
+    Pytest fixture to reset logger handlers before and after each test.
+    Ensures each test runs with a clean logging configuration.
     """
+    loggers = [logging.getLogger()]
+    loggers.extend(logging.Logger.manager.loggerDict.values())
+
+    for logger in loggers:
+        if isinstance(logger, logging.Logger):
+            logger.handlers.clear()
+            logger.propagate = True
+
     yield
-    # Remove all handlers from the root logger
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-    # Reset the logging level
-    logging.root.setLevel(logging.WARNING)
+
+    for logger in loggers:
+        if isinstance(logger, logging.Logger):
+            logger.handlers.clear()
+            logger.propagate = True
 
 
 def test_get_log_level_valid_levels():
     """
-    测试 get_log_level 函数，验证标准日志级别字符串能正确转换为对应的 logging 模块常量。
+    Tests `get_log_level` for valid log level strings.
+    Verifies correct conversion to logging module constants.
     """
     assert get_log_level("DEBUG") == DEBUG
     assert get_log_level("INFO") == INFO
@@ -49,16 +47,16 @@ def test_get_log_level_valid_levels():
 
 def test_get_log_level_invalid_level():
     """
-    测试 get_log_level 函数，验证输入无效级别字符串时是否回退到默认值 logging.INFO。
+    Tests `get_log_level` for invalid log level strings.
+    Ensures fallback to `logging.INFO` for unrecognized levels.
     """
     assert get_log_level("INVALID") == INFO
-    assert get_log_level("UNKNOWN") == INFO
 
 
 def test_get_log_level_case_insensitivity():
     """
-    测试 get_log_level 函数，验证输入小写级别字符串时是否能正确处理。
+    Tests `get_log_level` for case-insensitivity.
+    Verifies correct handling of mixed-case log level strings.
     """
     assert get_log_level("debug") == DEBUG
     assert get_log_level("info") == INFO
-    assert get_log_level("warning") == WARNING

@@ -1,4 +1,10 @@
-import logging  # 导入 logging 模块
+"""
+This module manages the application's user interface, including drawing OCR results
+and handling UI updates based on OCR data. It visualizes detected text and provides
+debugging functionalities.
+"""
+
+import logging
 import tkinter as tk
 
 import mouse
@@ -10,17 +16,19 @@ from ocr_processor import OCR_EVENT
 
 class UIManager:
     """
-    UIManager 类负责管理应用程序的用户界面。
-    它处理 Tkinter 窗口的创建、OCR 结果的绘制以及调试模式下的可视化。
+    Manages the application's user interface.
+    Handles the creation of the Tkinter window, drawing of OCR results, and visualization
+    in debug mode. It also manages UI updates and interactions.
     """
 
     def __init__(self, root: tk.Tk, ocr_data_provider):
         """
-        初始化 UIManager。
+        Initializes the UIManager.
 
         Args:
-            root (tk.Tk): Tkinter 的根窗口。
-            ocr_data_provider: 提供 OCR 数据的对象, 通常是 OCRProcessor 实例。
+            root (tk.Tk): The root Tkinter window for the application.
+            ocr_data_provider: An object that provides OCR data, typically an OCRProcessor instance.
+                               This object should have a `get_merged_ocr_data` method.
         """
         self.root = root
         self.ocr_data_provider = ocr_data_provider
@@ -35,19 +43,24 @@ class UIManager:
 
     def on_ocr_complete(self, _event):
         """
-        处理 OCR 完成事件, 更新 OCR 数据。
+        Event handler for when new OCR data is available.
+        Retrieves the merged OCR data from the provider and stores it.
+
+        Args:
+            _event: The Tkinter event object (not used).
         """
         self.ocr_data = self.ocr_data_provider.get_merged_ocr_data()
 
     def update_ui(self):
         """
-        更新用户界面, 绘制 OCR 识别结果。
+        Periodically updates the user interface.
+        Clears the canvas, draws bounding boxes and text for OCR results,
+        and highlights text under the mouse cursor. Handles debug mode visualization.
         """
         self.canvas.delete("all")
         x, y = mouse.get_position()
 
         if not self.ocr_data.empty:
-            # 绘制 OCR 识别结果
             for _index, row in self.ocr_data.iterrows():
                 left, top, width, height = row["left"], row["top"], row["width"], row["height"]
 
@@ -80,14 +93,17 @@ class UIManager:
 
     def start(self):
         """
-        启动 UI 更新循环。
+        Starts the UI update loop.
+        Sets the running flag to True and initiates the first UI update.
         """
         self.running = True
         self.update_ui()
 
     def stop(self):
         """
-        停止 UI 更新循环。
+        Stops the UI update loop.
+        Sets the running flag to False, which will cause the `update_ui` method
+        to exit the Tkinter main loop on its next iteration.
         """
-        logging.info("停止 UI 更新循环...")  # 使用 logging.info
+        logging.info("Stopping UI update loop...")
         self.running = False

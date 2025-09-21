@@ -49,3 +49,19 @@ def test_get_log_level_valid_levels(level_str, expected_level):
     Tests `get_log_level` for valid log level strings (case-insensitive).
     """
     assert get_log_level(level_str) == expected_level
+
+
+@pytest.mark.parametrize(
+    "level_str, expected_level",
+    [
+        ("INVALID", logging.INFO),  # Invalid level defaults to INFO
+        ("", logging.INFO),         # Empty string defaults to INFO
+    ],
+)
+def test_get_log_level_invalid_levels(level_str, expected_level):
+    """
+    Tests `get_log_level` for invalid log level strings.
+    It should default to logging.INFO for invalid inputs.
+    """
+    assert get_log_level(level_str) == expected_level
+

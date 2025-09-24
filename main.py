@@ -18,6 +18,7 @@ from config import config
 from event_manager import EventManager
 from logging_utils import get_log_level, setup_main_logging
 from ocr_processor import OCRProcessor
+from translator import TranslationProcessor
 from ui_manager import UIManager
 
 # Check for virtual environment and set TCL/TK library paths for PyInstaller compatibility.
@@ -49,8 +50,18 @@ class App:
         self.running = True
 
         self.ocr_processor = OCRProcessor(self.root, log_queue, log_level)
-        self.ui_manager = UIManager(root, self.ocr_processor)
-        self.event_manager = EventManager(self.on_exit)
+        
+        # Initialize translation processor if enabled
+        self.translator = None
+        if getattr(config, "TRANSLATION_ENABLED", False):
+            try:
+                self.translator = TranslationProcessor()
+                logging.info("Translation processor initialized successfully")
+            except Exception as e:
+                logging.error(f"Failed to initialize translation processor: {e}")
+        
+        self.ui_manager = UIManager(root, self.ocr_processor, self.translator)
+        self.event_manager = EventManager(self.on_exit, self.toggle_translation)
 
     def on_exit(self):
         """
@@ -63,6 +74,13 @@ class App:
         self.ui_manager.stop()
         self.event_manager.stop()
         self.root.after(0, self.root.destroy)
+
+    def toggle_translation(self):
+        """
+        Toggles the translation display mode in the UI manager.
+        """
+        if self.ui_manager:
+            self.ui_manager.toggle_translation_display()
 
     def start(self):
         """

@@ -22,14 +22,16 @@ class EventManager:
     Manages application events such as keyboard input, system tray interactions, and notifications.
     """
 
-    def __init__(self, on_exit_callback):
+    def __init__(self, on_exit_callback, on_toggle_translation_callback=None):
         """
-        Initializes the EventManager with an exit callback.
+        Initializes the EventManager with callbacks.
 
         Args:
             on_exit_callback (function): Function to call when the application is requested to exit.
+            on_toggle_translation_callback (function, optional): Function to call when translation toggle is requested.
         """
         self.on_exit_callback = on_exit_callback
+        self.on_toggle_translation_callback = on_toggle_translation_callback
         self.listener = None
         self.icon = None
         self.settings_window = None
@@ -61,23 +63,38 @@ class EventManager:
 
     def start_keyboard_listener(self):
         """
-        Starts a keyboard listener to monitor for the configured STOP_HOTKEY.
-        Triggers the `on_exit_callback` when the hotkey is pressed.
+        Starts a keyboard listener to monitor for configured hotkeys.
+        Monitors STOP_HOTKEY and TRANSLATION_HOTKEY if available.
         """
-        logging.info(f"Starting keyboard listener, monitoring hotkey: {config.STOP_HOTKEY}")
-        hotkey = keyboard.HotKey(keyboard.HotKey.parse(config.STOP_HOTKEY), self.on_exit_callback)
+        hotkeys = [config.STOP_HOTKEY]
+        hotkey_callbacks = [self.on_exit_callback]
+        
+        # Add translation hotkey if available and callback is provided
+        if hasattr(config, "TRANSLATION_HOTKEY") and self.on_toggle_translation_callback:
+            hotkeys.append(config.TRANSLATION_HOTKEY)
+            hotkey_callbacks.append(self.on_toggle_translation_callback)
+            logging.info(f"Translation hotkey registered: {config.TRANSLATION_HOTKEY}")
+        
+        logging.info(f"Starting keyboard listener, monitoring hotkeys: {hotkeys}")
+        
+        # Create hotkey objects
+        hotkey_objects = []
+        for hotkey_str, callback in zip(hotkeys, hotkey_callbacks):
+            hotkey_objects.append(keyboard.HotKey(keyboard.HotKey.parse(hotkey_str), callback))
 
         def on_press(key):
             """
             Handles key press events for the keyboard listener.
             """
-            hotkey.press(self.listener.canonical(key))
+            for hotkey in hotkey_objects:
+                hotkey.press(self.listener.canonical(key))
 
         def on_release(key):
             """
             Handles key release events for the keyboard listener.
             """
-            hotkey.release(self.listener.canonical(key))
+            for hotkey in hotkey_objects:
+                hotkey.release(self.listener.canonical(key))
 
         with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
             self.listener = listener
@@ -86,12 +103,18 @@ class EventManager:
     def start_notification(self):
         """
         Displays a Windows 10 toast notification indicating the program has started
-        and how to stop it.
+        and how to control it.
         """
         toaster = ToastNotifier()
+        message = f"Program started, press {config.STOP_HOTKEY} to stop"
+        
+        # Add translation hotkey info if available
+        if hasattr(config, "TRANSLATION_HOTKEY") and self.on_toggle_translation_callback:
+            message += f", press {config.TRANSLATION_HOTKEY} to toggle translation"
+            
         toaster.show_toast(
             "OCR-Translate-Sketch",
-            f"Program started, press {config.STOP_HOTKEY} to stop",
+            message,
             duration=5,
             threaded=True,
         )

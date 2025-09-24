@@ -36,6 +36,14 @@ class _Config:
         "DEBUG_RECT_OUTLINE_COLOR": str,
         "DEBUG_RECT_OUTLINE_WIDTH": int,
         "LOG_LEVEL": str,
+        "TRANSLATION_ENABLED": bool,
+        "TRANSLATION_CACHE_SIZE": int,
+        "TRANSLATION_CACHE_TTL": int,
+        "TRANSLATION_MAX_RETRIES": int,
+        "TRANSLATION_RETRY_DELAY": float,
+        "TRANSLATION_TARGET_LANG": str,
+        "TRANSLATION_SOURCE_LANG": str,
+        "TRANSLATION_HOTKEY": str,
     }
 
     def __init__(self):

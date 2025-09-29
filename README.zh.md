@@ -47,7 +47,7 @@
     ```
 4. 启动程序
     ```bash
-    uv run python main.py
+    uv run python src/main.py
     ```
 
 ### 其他方式运行
@@ -89,7 +89,7 @@ TRANSLATION_SOURCE_LANG: en
 
 ## 🕹️ 如何使用
 
-1.  运行 `main.py` 启动程序。
+1.  运行 `src/main.py` 启动程序。
 2.  程序会创建一个覆盖全屏的透明置顶窗口。
 3.  默认情况下，程序会以设定的频率对屏幕内容进行识别，并将结果实时显示在悬浮层中。
 4.  你可以使用 `config.yaml` 中设置的热键来切换翻译内容的显示。

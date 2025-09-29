@@ -42,7 +42,7 @@ class EventManager:
         The menu includes options to open settings and exit the application.
         """
         logging.info("Starting tray icon...")
-        image = Image.open("icon.png")
+        image = Image.open(config.ICON_PATH)
         menu = (
             pystray.MenuItem("Settings", self.open_settings),
             pystray.MenuItem("Exit", self.on_exit_callback),

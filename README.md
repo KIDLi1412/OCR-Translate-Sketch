@@ -51,7 +51,7 @@ uv is an extremely fast Python package manager that provides a smoother developm
     ```
 4. Start the program
     ```bash
-    uv run python main.py
+    uv run python src/main.py
     ```
 
 ### Other Ways to Run
@@ -93,7 +93,7 @@ For more detailed configuration instructions, please refer to CONFIG.md.
 
 ## 🕹️ How to Use
 
-1.  Run `main.py` to start the program.
+1.  Run `src/main.py` to start the program.
 2.  The program will create a transparent, always-on-top window that covers the entire screen.
 3.  By default, the program will recognize screen content at a set frequency and display the results in real-time on the floating layer.
 4.  You can use the hotkey set in `config.yaml` to toggle the display of translated content.

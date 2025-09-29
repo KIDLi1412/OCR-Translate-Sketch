@@ -12,6 +12,7 @@ import os
 import sys
 import threading
 import tkinter as tk
+from pathlib import Path
 from logging.handlers import QueueListener
 
 from config import config
@@ -115,6 +116,10 @@ def main():
     with contextlib.suppress(AttributeError, OSError):
         # Set process DPI awareness for proper scaling on high-DPI displays.
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
+
+    # Set the icon path relative to the main script
+    # This ensures the icon is found whether running from source or a bundled executable
+    config.ICON_PATH = Path(__file__).parent.parent / "icon.png"
 
     root = tk.Tk()
     # Configure window properties for a borderless, always-on-top, and transparent overlay.

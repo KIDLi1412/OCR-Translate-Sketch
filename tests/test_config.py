@@ -6,6 +6,7 @@ data type conversions, and dynamic updates via file watching.
 
 import os
 import tempfile
+
 import pytest
 import yaml
 
@@ -13,7 +14,7 @@ from config import CONFIG_FILE, ConfigFileEventHandler, _Config
 
 
 @pytest.fixture
-def config_setup_teardown(mocker): # Added mocker fixture
+def config_setup_teardown(mocker):
     """
     Sets up the environment before each test method execution.
     Creates a temporary directory and file to simulate config.yaml.
@@ -22,9 +23,8 @@ def config_setup_teardown(mocker): # Added mocker fixture
     test_dir = tempfile.mkdtemp()
     test_config_path = os.path.join(test_dir, CONFIG_FILE)
 
-    # patcher = mock.patch('config.CONFIG_FILE', test_config_path) # Replaced with mocker.patch
-    mocker.patch('config.CONFIG_FILE', test_config_path)
-    # patcher.start() # Not needed with mocker
+    patcher = mocker.patch('config.CONFIG_FILE', test_config_path)
+    patcher.start()
 
     yield test_config_path, test_dir  # Provide the path to the test config file and directory
 

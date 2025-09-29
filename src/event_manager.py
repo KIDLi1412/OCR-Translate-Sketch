@@ -68,18 +68,15 @@ class EventManager:
         """
         hotkeys = [config.STOP_HOTKEY]
         hotkey_callbacks = [self.on_exit_callback]
-        
         # Add translation hotkey if available and callback is provided
         if hasattr(config, "TRANSLATION_HOTKEY") and self.on_toggle_translation_callback:
             hotkeys.append(config.TRANSLATION_HOTKEY)
             hotkey_callbacks.append(self.on_toggle_translation_callback)
             logging.info(f"Translation hotkey registered: {config.TRANSLATION_HOTKEY}")
-        
         logging.info(f"Starting keyboard listener, monitoring hotkeys: {hotkeys}")
-        
         # Create hotkey objects
         hotkey_objects = []
-        for hotkey_str, callback in zip(hotkeys, hotkey_callbacks):
+        for hotkey_str, callback in zip(hotkeys, hotkey_callbacks, strict=True):
             hotkey_objects.append(keyboard.HotKey(keyboard.HotKey.parse(hotkey_str), callback))
 
         def on_press(key):
@@ -107,11 +104,9 @@ class EventManager:
         """
         toaster = ToastNotifier()
         message = f"Program started, press {config.STOP_HOTKEY} to stop"
-        
         # Add translation hotkey info if available
         if hasattr(config, "TRANSLATION_HOTKEY") and self.on_toggle_translation_callback:
             message += f", press {config.TRANSLATION_HOTKEY} to toggle translation"
-            
         toaster.show_toast(
             "OCR-Translate-Sketch",
             message,

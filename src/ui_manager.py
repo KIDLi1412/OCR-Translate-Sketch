@@ -6,7 +6,6 @@ debugging functionalities.
 
 import logging
 import tkinter as tk
-from typing import Optional
 
 import mouse
 import pandas as pd
@@ -58,7 +57,7 @@ class UIManager:
         # Clear translated texts cache when new OCR data arrives
         self.translated_texts.clear()
 
-    def get_translated_text(self, original_text: str) -> Optional[str]:
+    def get_translated_text(self, original_text: str) -> str | None:
         """
         Get translated text for the given original text.
         Uses cache to avoid repeated translations.
@@ -112,18 +111,16 @@ class UIManager:
                         outline=config.HIGHLIGHT_RECT_OUTLINE_COLOR,
                         width=config.HIGHLIGHT_RECT_OUTLINE_WIDTH,
                     )
-                    
                     # Display original text
                     self.canvas.create_text(
                         left, top + height + 10, text=row["text"], fill="red", anchor="nw", font=("Arial", 12, "bold")
                     )
-                    
                     # Display translated text if available
                     if self.show_translation:
                         translated_text = self.get_translated_text(row["text"])
                         if translated_text:
                             self.canvas.create_text(
-                                left, top + height + 35, text=translated_text, fill="blue", 
+                                left, top + height + 35, text=translated_text, fill="blue",
                                 anchor="nw", font=("Arial", 12, "bold")
                             )
                 elif self.debug_mode:

@@ -12,8 +12,8 @@ import os
 import sys
 import threading
 import tkinter as tk
-from pathlib import Path
 from logging.handlers import QueueListener
+from pathlib import Path
 
 from config import config
 from event_manager import EventManager
@@ -51,7 +51,6 @@ class App:
         self.running = True
 
         self.ocr_processor = OCRProcessor(self.root, log_queue, log_level)
-        
         # Initialize translation processor if enabled
         self.translator = None
         if getattr(config, "TRANSLATION_ENABLED", False):
@@ -60,7 +59,6 @@ class App:
                 logging.info("Translation processor initialized successfully")
             except Exception as e:
                 logging.error(f"Failed to initialize translation processor: {e}")
-        
         self.ui_manager = UIManager(root, self.ocr_processor, self.translator)
         self.event_manager = EventManager(self.on_exit, self.toggle_translation)
 

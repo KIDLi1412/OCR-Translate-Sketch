@@ -6,7 +6,6 @@ retry mechanisms, and caching for improved reliability and performance.
 
 import logging
 import time
-from typing import Dict, Optional, Tuple
 
 from googletrans import Translator
 from googletrans.models import Translated
@@ -31,7 +30,7 @@ class TranslationProcessor:
     def __init__(self):
         """Initialize the translation processor with Google Translate client."""
         self.translator = Translator()
-        self.cache: Dict[str, Tuple[str, float]] = {}
+        self.cache: dict[str, tuple[str, float]] = {}
         self.max_cache_size = getattr(config, "TRANSLATION_CACHE_SIZE", 1000)
         self.cache_ttl = getattr(config, "TRANSLATION_CACHE_TTL", 3600)  # 1 hour
         self.max_retries = getattr(config, "TRANSLATION_MAX_RETRIES", 3)
@@ -66,23 +65,18 @@ class TranslationProcessor:
             for key, _ in sorted_items[:items_to_remove]:
                 del self.cache[key]
 
-    def _get_cached_translation(self, text: str) -> Optional[str]:
+    def _get_cached_translation(self, text: str) -> str | None:
         """
         Retrieve a cached translation if available and valid.
-
-        Args:
-            text (str): The original text to look up in cache.
-
-        Returns:
-            Optional[str]: The cached translation if found and valid, None otherwise.
         """
-        if text in self.cache:
-            translation, timestamp = self.cache[text]
-            if self._is_cache_valid(timestamp):
-                return translation
-            else:
-                # Remove expired entry
-                del self.cache[text]
+        if text not in self.cache:
+            return None
+
+        translation, timestamp = self.cache[text]
+        if self._is_cache_valid(timestamp):
+            return translation
+        # Remove expired entry
+        del self.cache[text]
         return None
 
     def _cache_translation(self, text: str, translation: str):
@@ -96,55 +90,39 @@ class TranslationProcessor:
         self._clean_cache()
         self.cache[text] = (translation, time.time())
 
-    def _translate_with_retry(self, text: str, target_lang: str = "zh-cn", 
+    def _translate_with_retry(self, text: str, target_lang: str = "zh-cn",
                             source_lang: str = "en") -> Translated:
         """
-        Perform translation with retry mechanism and error handling.
-
-        Args:
-            text (str): The text to translate.
-            target_lang (str): Target language code (default: "zh-cn" for Chinese).
-            source_lang (str): Source language code (default: "en" for English).
-
-        Returns:
-            Translated: The translation result from googletrans.
-
-        Raises:
-            TranslationError: If translation fails after all retries.
+        Translate text with retry logic.
         """
         last_error = None
-        
+
         for attempt in range(self.max_retries):
             try:
                 logging.debug(f"Translation attempt {attempt + 1} for text: '{text[:50]}...'")
-                
                 result = self.translator.translate(
-                    text, 
-                    dest=target_lang, 
+                    text,
+                    dest=target_lang,
                     src=source_lang
                 )
-                
                 if result and result.text:
                     logging.debug(f"Translation successful: '{text[:50]}...' -> '{result.text[:50]}...'")
                     return result
-                else:
-                    raise TranslationError("Empty translation result")
-                    
-            except (Exception) as e:
+                raise TranslationError("Empty translation result")
+            except Exception as e:
                 last_error = e
                 logging.warning(f"Translation attempt {attempt + 1} failed: {e}")
-                
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (attempt + 1))  # Exponential backoff
-                    
+
         # All retries failed
         error_msg = f"Translation failed after {self.max_retries} attempts"
         if last_error:
             error_msg += f": {last_error}"
         raise TranslationError(error_msg, text)
 
-    def translate_text(self, text: str, target_lang: str = "zh-cn", 
-                      source_lang: str = "en") -> str:
+    def translate_text(self, text: str, target_lang: str = "zh-cn",
+                       source_lang: str = "en") -> str:
         """
         Translate text from source language to target language.
 
@@ -159,30 +137,25 @@ class TranslationProcessor:
         Raises:
             TranslationError: If translation fails.
         """
-        if not text or not text.strip():
-            return text
-
-        # Check cache first
-        cached_result = self._get_cached_translation(text)
-        if cached_result is not None:
-            logging.debug(f"Using cached translation for: '{text[:50]}...'")
-            return cached_result
-
+        if not text:
+            return ""
         try:
+            # Check cache first
+            cached_translation = self._get_cached_translation(text)
+            if cached_translation:
+                return cached_translation
+
             # Perform translation
             result = self._translate_with_retry(text, target_lang, source_lang)
-            
             # Cache the result
             self._cache_translation(text, result.text)
-            
             return result.text
-            
         except TranslationError:
             raise
         except Exception as e:
             error_msg = f"Unexpected error during translation: {e}"
             logging.error(error_msg)
-            raise TranslationError(error_msg, text)
+            raise TranslationError(error_msg, text) from e
 
     def translate_ocr_data(self, ocr_text: str) -> str:
         """
@@ -199,23 +172,18 @@ class TranslationProcessor:
         """
         return self.translate_text(ocr_text, target_lang="zh-cn", source_lang="en")
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> dict[str, int]:
         """
         Get statistics about the translation cache.
-
-        Returns:
-            Dict[str, int]: Cache statistics including size and valid entries.
         """
         current_time = time.time()
         valid_entries = sum(
             1 for _, timestamp in self.cache.values()
             if current_time - timestamp < self.cache_ttl
         )
-        
         return {
             "total_entries": len(self.cache),
             "valid_entries": valid_entries,
-            "expired_entries": len(self.cache) - valid_entries
         }
 
     def clear_cache(self):

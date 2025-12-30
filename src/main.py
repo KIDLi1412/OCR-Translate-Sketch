@@ -8,8 +8,6 @@ import contextlib
 import ctypes
 import logging
 import multiprocessing
-import os
-import sys
 import threading
 import tkinter as tk
 from logging.handlers import QueueListener
@@ -21,15 +19,6 @@ from logging_utils import get_log_level, setup_main_logging
 from ocr_processor import OCRProcessor
 from translator import TranslationProcessor
 from ui_manager import UIManager
-
-# Check for virtual environment and set TCL/TK library paths for PyInstaller compatibility.
-if "VIRTUAL_ENV" in os.environ:
-    base_python_path = sys.base_prefix
-    tcl_path = os.path.join(base_python_path, "tcl", "tcl8.6")
-    tk_path = os.path.join(base_python_path, "tcl", "tk8.6")
-    if os.path.exists(tcl_path) and os.path.exists(tk_path):
-        os.environ["TCL_LIBRARY"] = tcl_path
-        os.environ["TK_LIBRARY"] = tk_path
 
 
 class App:
